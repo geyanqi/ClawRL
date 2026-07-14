@@ -1,0 +1,59 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Editors (workspace-local only; vendored projects keep their own files)
+/.idea/
+/.vscode/
+*.swp
+*~
+
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# Local Codex working state
+/.codex/
+/.scratch/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp/
+
+# Training and experiment artifacts
+checkpoints/
+outputs/
+logs/
+wandb/
+tensorboard/
