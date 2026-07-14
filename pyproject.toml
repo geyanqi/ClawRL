@@ -14,6 +14,13 @@ authors = [
 ]
 dependencies = []
 
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pytest",
+    "ruff",
+]
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 
