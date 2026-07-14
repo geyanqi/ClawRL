@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.0.0",
+  "source_revision": "6710a69",
+  "integration_branch": "codex/overnight-production-shaped-dry-run",
+  "active_ticket": null,
+  "ready_frontier": ["02", "11"],
+  "push_pending": [],
+  "production_blockers": [
+    "No approved production DataSourceSkill schema, credentials, or governance inputs",
+    "No approved Sol, Luna, generator model configuration, rubric, prompts, or scoring policies",
+    "No production CFS capability evidence, root, visibility policy, or permanent-trace governance",
+    "No production Harness whitelist, sandbox policy, or audit configuration",
+    "No production cluster jobbuilder, image, mounts, queue, resources, or credentials",
+    "No installed torch, ray, tensordict, or complete verl runtime for real trainer validation",
+    "No approved monitoring, cohort, promotion, autonomy-budget, 35B, 122B, or final-evaluation configuration"
+  ],
+  "tickets": {
+    "01": {
+      "blocked_by": [],
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-01-profiled-synthetic-walking-skeleton",
+      "commit": null,
+      "push_state": "pending"
+    },
+    "02": {
+      "blocked_by": ["01"],
+      "implementation_state": "ready",
+      "production_readiness": "blocked"
+    },
+    "03": {
+      "blocked_by": ["02"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "04": {
+      "blocked_by": ["03"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "05": {
+      "blocked_by": ["04"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "06": {
+      "blocked_by": ["05"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "07": {
+      "blocked_by": ["05"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "08": {
+      "blocked_by": ["06", "07"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "09": {
+      "blocked_by": ["03"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "10": {
+      "blocked_by": ["02"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "11": {
+      "blocked_by": ["01"],
+      "implementation_state": "ready",
+      "production_readiness": "blocked"
+    },
+    "12": {
+      "blocked_by": ["11"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "13": {
+      "blocked_by": ["10", "11"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "14": {
+      "blocked_by": ["06", "07", "10", "13"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "15": {
+      "blocked_by": ["14"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "16": {
+      "blocked_by": ["14"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "17": {
+      "blocked_by": ["12", "14"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "18": {
+      "blocked_by": ["16", "17"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "19": {
+      "blocked_by": ["18"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "20": {
+      "blocked_by": ["10"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "21": {
+      "blocked_by": ["02"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "22": {
+      "blocked_by": ["18", "21"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "23": {
+      "blocked_by": ["19", "22"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "24": {
+      "blocked_by": ["08", "09", "20", "23"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "25": {
+      "blocked_by": ["24"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "26": {
+      "blocked_by": ["25"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "27": {
+      "blocked_by": ["26"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "28": {
+      "blocked_by": ["27"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "29": {
+      "blocked_by": ["28"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "30": {
+      "blocked_by": ["29"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "31": {
+      "blocked_by": ["30"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    },
+    "32": {
+      "blocked_by": ["15", "31"],
+      "implementation_state": "blocked",
+      "production_readiness": "blocked"
+    }
+  }
+}
