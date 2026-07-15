@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["02", "11"],
+  "ready_frontier": ["03", "10", "11", "21"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -20,17 +20,20 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-01-profiled-synthetic-walking-skeleton",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "064a165",
+      "push_state": "pushed"
     },
     "02": {
       "blocked_by": ["01"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-02-typed-harness-action",
+      "commit": null,
+      "push_state": "pending"
     },
     "03": {
       "blocked_by": ["02"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "04": {
@@ -65,7 +68,7 @@
     },
     "10": {
       "blocked_by": ["02"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "11": {
@@ -120,7 +123,7 @@
     },
     "21": {
       "blocked_by": ["02"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "22": {
