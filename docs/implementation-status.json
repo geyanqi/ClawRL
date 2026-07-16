@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["03", "10", "11", "21"],
+  "ready_frontier": ["04", "09", "10", "11", "21"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -28,17 +28,20 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-02-typed-harness-action",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "512d26f",
+      "push_state": "pushed"
     },
     "03": {
       "blocked_by": ["02"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-03-governed-100-trace-dataset",
+      "commit": null,
+      "push_state": "pending"
     },
     "04": {
       "blocked_by": ["03"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "05": {
@@ -63,7 +66,7 @@
     },
     "09": {
       "blocked_by": ["03"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "10": {

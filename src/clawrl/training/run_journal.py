@@ -69,12 +69,26 @@ class RunJournal:
     readers only verify the already committed terminal ref.
     """
 
-    def __init__(self, root: str | Path, store: ArtifactStore, run_id: str) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        store: ArtifactStore,
+        run_id: str,
+        *,
+        input_schema_name: str = "TraceRunInput",
+        input_schema_version: str = "1.0.0",
+    ) -> None:
         if _RUN_ID.fullmatch(run_id) is None:
             raise ValueError("run_id must be a filesystem-safe stable identifier")
         self.root = Path(root)
         self.store = store
         self.run_id = run_id
+        if not isinstance(input_schema_name, str) or not input_schema_name:
+            raise ValueError("input_schema_name is required")
+        if not isinstance(input_schema_version, str) or not input_schema_version:
+            raise ValueError("input_schema_version is required")
+        self.input_schema_name = input_schema_name
+        self.input_schema_version = input_schema_version
         self.run_dir = self.root / "runs" / run_id
         self.events_dir = self.run_dir / "events"
         self.fences_dir = self.run_dir / "fences"
@@ -333,6 +347,7 @@ class RunJournal:
         receipts: list[ObservationReceipt] = []
         for ref_path in sorted(self.quarantine_dir.glob("*.ref")):
             observation = self.store.read(self._read_ref(ref_path), expected_schema_name="Observation")
+            self._validate_observation_artifact(observation)
             receipts.append(
                 ObservationReceipt(
                     observation=observation,
@@ -411,16 +426,48 @@ class RunJournal:
                 raise RunJournalCorruption("event artifact is corrupt") from error
             payload = event.payload
             if (
-                payload.get("run_id") != self.run_id
+                event.schema_version != "1.0.0"
+                or set(payload)
+                != {
+                    "controller_epoch",
+                    "details",
+                    "event_type",
+                    "previous_event_hash",
+                    "run_id",
+                    "sequence",
+                }
+                or payload.get("run_id") != self.run_id
+                or type(payload.get("run_id")) is not str
+                or type(payload.get("sequence")) is not int
                 or payload.get("sequence") != expected_sequence
                 or payload.get("previous_event_hash") != previous_hash
-                or not isinstance(payload.get("event_type"), str)
-                or not isinstance(payload.get("controller_epoch"), int)
-                or isinstance(payload.get("controller_epoch"), bool)
+                or (
+                    payload.get("previous_event_hash") is not None
+                    and (
+                        type(payload.get("previous_event_hash")) is not str
+                        or _HASH.fullmatch(cast(str, payload.get("previous_event_hash"))) is None
+                    )
+                )
+                or type(payload.get("event_type")) is not str
+                or not cast(str, payload.get("event_type"))
+                or type(payload.get("controller_epoch")) is not int
                 or not 0 < cast(int, payload.get("controller_epoch")) <= MAX_SAFE_INTEGER
-                or not isinstance(payload.get("details"), dict)
+                or type(payload.get("details")) is not dict
             ):
                 raise RunJournalCorruption("event chain fields are invalid")
+            if payload.get("event_type") == "OBSERVATION_RECORDED":
+                details = cast(dict[str, object], payload["details"])
+                observation_hash = details.get("observation_hash")
+                if set(details) != {"observation_hash"} or type(observation_hash) is not str:
+                    raise RunJournalCorruption("observation event details are invalid")
+                try:
+                    observation = self.store.read(
+                        cast(str, observation_hash),
+                        expected_schema_name="Observation",
+                    )
+                except ArtifactCorruption as error:
+                    raise RunJournalCorruption("observation artifact is corrupt") from error
+                self._validate_observation_artifact(observation)
             events.append(event)
             previous_hash = event.content_hash
         return events
@@ -460,8 +507,8 @@ class RunJournal:
             claim = self.store.read(self._read_ref(ref_path), expected_schema_name="FenceClaim")
             claim_epoch = claim.payload.get("epoch")
             if (
-                not isinstance(claim_epoch, int)
-                or isinstance(claim_epoch, bool)
+                claim.schema_version != "1.0.0"
+                or type(claim_epoch) is not int
                 or not 0 < claim_epoch <= MAX_SAFE_INTEGER
                 or claim.payload != {"epoch": epoch, "run_id": self.run_id}
             ):
@@ -576,8 +623,8 @@ class RunJournal:
     def _identity_payload(self, input_hash: str) -> dict[str, object]:
         return {
             "input_hash": input_hash,
-            "input_schema_name": "TraceRunInput",
-            "input_schema_version": "1.0.0",
+            "input_schema_name": self.input_schema_name,
+            "input_schema_version": self.input_schema_version,
             "run_id": self.run_id,
         }
 
@@ -649,13 +696,42 @@ class RunJournal:
             raise RunJournalCorruption("terminal event does not reference RunClosed")
         closed = self.store.read(closed_hash, expected_schema_name="RunClosed")
         if (
-            closed.payload.get("run_id") != self.run_id
+            closed.schema_version != "1.0.0"
+            or set(closed.payload)
+            != {
+                "controller_epoch",
+                "previous_event_hash",
+                "reason_code",
+                "run_id",
+                "status",
+                "terminal_sequence",
+            }
+            or type(closed.payload.get("controller_epoch")) is not int
+            or type(closed.payload.get("terminal_sequence")) is not int
+            or type(closed.payload.get("run_id")) is not str
+            or type(closed.payload.get("reason_code")) is not str
+            or not cast(str, closed.payload.get("reason_code"))
+            or closed.payload.get("status") not in {"succeeded", "failed"}
+            or closed.payload.get("run_id") != self.run_id
             or closed.payload.get("terminal_sequence") != terminal_event.payload["sequence"]
             or closed.payload.get("previous_event_hash") != terminal_event.payload["previous_event_hash"]
             or closed.payload.get("controller_epoch") != terminal_event.payload["controller_epoch"]
         ):
             raise RunJournalCorruption("RunClosed does not match its terminal event")
         return closed
+
+    def _validate_observation_artifact(self, observation: Artifact) -> None:
+        payload = observation.payload
+        if (
+            observation.schema_version != "1.0.0"
+            or set(payload) != {"details", "observation_type", "run_id"}
+            or type(payload.get("run_id")) is not str
+            or payload.get("run_id") != self.run_id
+            or type(payload.get("observation_type")) is not str
+            or not cast(str, payload.get("observation_type"))
+            or type(payload.get("details")) is not dict
+        ):
+            raise RunJournalCorruption("observation artifact fields are invalid")
 
     @staticmethod
     def _publish_ref(path: Path, content_hash: str) -> None:
