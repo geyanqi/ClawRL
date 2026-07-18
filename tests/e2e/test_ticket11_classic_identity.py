@@ -116,3 +116,57 @@ def test_same_run_with_changed_source_is_integrity_conflict(tmp_path: Path) -> N
         ClassicIdentityWorkflow.run(tmp_path, config=config, sources=_sources(" changed"))
     recovered = ClassicIdentityWorkflow.resume(tmp_path, config.run_id)
     ArtifactStore(tmp_path).read(recovered.report.content_hash, expected_schema_name="ClassicTrajectoryContractReport")
+
+
+@pytest.mark.parametrize(
+    "stage",
+    [
+        "wide_prefactor",
+        "generation",
+        "repeat",
+        "union",
+        "balance",
+        "chunk_padding",
+        "reward_loop_worker",
+    ],
+)
+def test_every_declared_stage_fails_closed_on_injected_identity_mismatch(tmp_path: Path, stage: str) -> None:
+    config = ClassicIdentityConfig(
+        f"classic-stage-{stage}",
+        4,
+        rollout_count=2,
+        chunk_size=3,
+        fault_stage=stage,
+        fault_kind="global_step_mismatch",
+    )
+    with pytest.raises(ClassicIdentityError, match="CLASSIC_IDENTITY_CORRUPTION"):
+        ClassicIdentityWorkflow.run(tmp_path, config=config, sources=_sources())
+
+
+def test_resume_rejects_coherent_hash_chain_with_tampered_generation_content(tmp_path: Path) -> None:
+    config = ClassicIdentityConfig("classic-tamper-11", 5, rollout_count=2, chunk_size=3)
+    snapshot = ClassicIdentityWorkflow.run(tmp_path, config=config, sources=_sources())
+    store = ArtifactStore(tmp_path)
+    forged_hashes = [snapshot.stages[0].content_hash]
+    parent_hash = snapshot.stages[0].content_hash
+    for stage_index, original in enumerate(snapshot.stages[1:], start=1):
+        payload = cast(dict[str, JsonValue], json.loads(json.dumps(original.payload)))
+        payload["parent_hash"] = parent_hash
+        if stage_index == 1:
+            batch = cast(dict[str, JsonValue], payload["batch"])
+            rows = cast(list[dict[str, JsonValue]], batch["rows"])
+            rows[0]["response"] = "tampered-generation-content"
+        forged = store.put("ClassicTrajectoryStage", "1.0.0", payload)
+        forged_hashes.append(forged.content_hash)
+        parent_hash = forged.content_hash
+    dump_payload = cast(dict[str, JsonValue], json.loads(json.dumps(snapshot.dump.payload)))
+    dump_payload["source_stage_hash"] = parent_hash
+    forged_dump = store.put("ClassicTrajectoryDump", "1.0.0", dump_payload)
+    report_payload = cast(dict[str, JsonValue], json.loads(json.dumps(snapshot.report.payload)))
+    report_payload["dump_hash"] = forged_dump.content_hash
+    report_payload["stage_hashes"] = cast(list[JsonValue], forged_hashes)
+    forged_report = store.put("ClassicTrajectoryContractReport", "1.0.0", report_payload)
+    report_ref = tmp_path / "classic-identity-runs" / config.run_id / "report.ref"
+    report_ref.write_text(f"{forged_report.content_hash}\n", encoding="ascii")
+    with pytest.raises(ClassicIdentityError, match="generation does not match"):
+        ClassicIdentityWorkflow.resume(tmp_path, config.run_id)

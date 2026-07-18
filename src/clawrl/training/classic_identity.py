@@ -559,7 +559,8 @@ class ClassicIdentityWorkflow:
         )
         decision = store.read(cast(str, report.payload["decision_record_hash"]), expected_schema_name="DecisionRecord")
         cls._validate_contract(contract, decision)
-        baseline = ClassicRewardManager.prefactor(config, sources).identity_set_hash
+        expected_batch = ClassicRewardManager.prefactor(config, sources)
+        baseline = expected_batch.identity_set_hash
         stages: list[Artifact] = []
         parent_hash = input_artifact.content_hash
         for index, (stage_name, stage_hash) in enumerate(zip(_STAGE_NAMES, stage_hashes, strict=True), start=1):
@@ -575,6 +576,10 @@ class ClassicIdentityWorkflow:
                 contract_hash=contract.content_hash,
             )
             cls._validate_stage_batch(stage_name, batch, baseline)
+            if stage_name != "wide_prefactor":
+                expected_batch = cls._transform(stage_name, expected_batch, config)
+            if batch.artifact_payload() != expected_batch.artifact_payload():
+                raise ClassicIdentityError(f"classic stage {stage_name} does not match its deterministic transform")
             stages.append(stage)
             parent_hash = stage.content_hash
         dump = store.read(cast(str, report.payload["dump_hash"]), expected_schema_name="ClassicTrajectoryDump")

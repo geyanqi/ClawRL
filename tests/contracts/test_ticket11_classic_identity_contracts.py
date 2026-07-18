@@ -74,6 +74,17 @@ def test_batch_rejects_missing_duplicate_and_batch_step_mismatch() -> None:
     with pytest.raises(ClassicIdentityError, match="batch global_steps"):
         ClassicBatch.from_mapping(mismatch)
 
+    row_hashes = [row.content_hash for row in valid.rows]
+    with pytest.raises(ClassicIdentityError, match="padding is only valid in the final"):
+        ClassicBatch(
+            valid.rows,
+            valid.global_steps,
+            (
+                (row_hashes[0], None, None),
+                (row_hashes[1], row_hashes[2], row_hashes[3]),
+            ),
+        )
+
 
 def test_unverified_classic_variant_and_real_verl_remain_train_blocked(tmp_path: Path) -> None:
     unverified = ClassicIdentityWorkflow.production_readiness(
