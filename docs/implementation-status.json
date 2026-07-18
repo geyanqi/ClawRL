@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["07", "09", "10", "11", "21"],
+  "ready_frontier": ["08", "09", "10", "11", "21"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -60,13 +60,16 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-06-luna4-sol-fallback",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "110710e",
+      "push_state": "pushed"
     },
     "07": {
       "blocked_by": ["05"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-07-expand-luna-16-32",
+      "commit": null,
+      "push_state": "pending"
     },
     "08": {
       "blocked_by": ["06", "07"],

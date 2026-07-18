@@ -37,10 +37,19 @@ _FIXTURE_ROLE_LINEAGES: dict[CertificationRole, str] = {
 _TICKET06_FIXTURE_ROLE_LINEAGES: dict[CertificationRole, str] = {
     role: f"/fixture/ticket06_contract_example_{role.casefold()}" for role in _ROLE_LINEAGES
 }
+_TICKET07_FIXTURE_ROLE_LINEAGES: dict[CertificationRole, str] = {
+    role: f"/fixture/ticket07_contract_example_{role.casefold()}" for role in _ROLE_LINEAGES
+}
 _PROFILE_LINEAGE_ALLOWLISTS: dict[CertificationExecutionProfile, dict[CertificationRole, frozenset[str]]] = {
     "isolated_subagent": {role: _ROLE_LINEAGE_ALLOWLISTS[role] for role in _ROLE_LINEAGES},
     "fixture_contract_simulator": {
-        role: frozenset({_FIXTURE_ROLE_LINEAGES[role], _TICKET06_FIXTURE_ROLE_LINEAGES[role]})
+        role: frozenset(
+            {
+                _FIXTURE_ROLE_LINEAGES[role],
+                _TICKET06_FIXTURE_ROLE_LINEAGES[role],
+                _TICKET07_FIXTURE_ROLE_LINEAGES[role],
+            }
+        )
         for role in _ROLE_LINEAGES
     },
 }
@@ -61,6 +70,12 @@ _TICKET06_PACKET_ID_PREFIXES: dict[CertificationRole, str] = {
     "StudentJudge": "t06-student-",
     "AlignmentAuditor": "t06-auditor-",
     "PromptOptimizer": "t06-optimizer-",
+}
+_TICKET07_PACKET_ID_PREFIXES: dict[CertificationRole, str] = {
+    "TeacherScorer": "t07-teacher-",
+    "StudentJudge": "t07-student-",
+    "AlignmentAuditor": "t07-auditor-",
+    "PromptOptimizer": "t07-optimizer-",
 }
 
 
@@ -84,9 +99,21 @@ def ticket06_fixture_role_lineage(role: CertificationRole) -> str:
     return _TICKET06_FIXTURE_ROLE_LINEAGES[role]
 
 
-def _is_ticket06_packet(role: CertificationRole, packet: Artifact) -> bool:
+def ticket07_fixture_role_lineage(role: CertificationRole) -> str:
+    """Return a simulator-only Ticket07 lineage with no legacy authority."""
+
+    return _TICKET07_FIXTURE_ROLE_LINEAGES[role]
+
+
+def _post_ticket05_packet_version(role: CertificationRole, packet: Artifact) -> int | None:
     packet_id = packet.payload.get("packet_id")
-    return type(packet_id) is str and cast(str, packet_id).startswith(_TICKET06_PACKET_ID_PREFIXES[role])
+    if type(packet_id) is not str:
+        return None
+    if cast(str, packet_id).startswith(_TICKET06_PACKET_ID_PREFIXES[role]):
+        return 6
+    if cast(str, packet_id).startswith(_TICKET07_PACKET_ID_PREFIXES[role]):
+        return 7
+    return None
 
 
 def _execution_profile_for_lineage(
@@ -104,7 +131,8 @@ def _execution_profile_for_lineage(
 
 def output_schema_contract(role: CertificationRole, *, items_per_turn: int = 8) -> dict[str, JsonValue]:
     if role in {"TeacherScorer", "StudentJudge"}:
-        if items_per_turn not in {4, 8}:
+        supported = {4, 8} if role == "TeacherScorer" else {4, 8, 16, 32}
+        if items_per_turn not in supported:
             raise CertificationRoleOutputError("scoring items_per_turn is unsupported")
         return {
             "dimension_fields": ["correctness", "reasoning_quality", "task_completion", "tool_discipline"],
@@ -479,20 +507,21 @@ class CertificationRoleIngress:
     ) -> CertificationRoleIngressReceipt:
         store = ArtifactStore(root)
         packet = cls._read_packet(store, role, input_packet_hash)
-        ticket06_packet = _is_ticket06_packet(role, packet)
+        packet_version = _post_ticket05_packet_version(role, packet)
         lineage_grant: Artifact | None = None
         if execution_profile == "fixture_contract_simulator":
-            accepted_fixture_lineages = (
-                frozenset({_TICKET06_FIXTURE_ROLE_LINEAGES[role]})
-                if ticket06_packet
-                else _PROFILE_LINEAGE_ALLOWLISTS[execution_profile][role]
-            )
+            if packet_version == 6:
+                accepted_fixture_lineages = frozenset({_TICKET06_FIXTURE_ROLE_LINEAGES[role]})
+            elif packet_version == 7:
+                accepted_fixture_lineages = frozenset({_TICKET07_FIXTURE_ROLE_LINEAGES[role]})
+            else:
+                accepted_fixture_lineages = _PROFILE_LINEAGE_ALLOWLISTS[execution_profile][role]
             if role_session_lineage not in accepted_fixture_lineages:
                 raise CertificationRoleOutputError("fixture role lineage does not match its closed-world profile")
         elif execution_profile == "isolated_subagent":
-            if ticket06_packet and role_session_lineage in _ROLE_LINEAGE_ALLOWLISTS[role]:
-                raise CertificationRoleOutputError("Ticket05 legacy isolated lineage cannot authorize Ticket06")
-            if ticket06_packet or role_session_lineage not in _ROLE_LINEAGE_ALLOWLISTS[role]:
+            if packet_version is not None and role_session_lineage in _ROLE_LINEAGE_ALLOWLISTS[role]:
+                raise CertificationRoleOutputError("Ticket05 legacy isolated lineage cannot authorize a later ticket")
+            if packet_version is not None or role_session_lineage not in _ROLE_LINEAGE_ALLOWLISTS[role]:
                 lineage_grant = cls.validate_isolated_lineage(
                     root,
                     role=role,
@@ -639,7 +668,7 @@ class CertificationRoleIngress:
             raise CertificationRoleOutputError("opaque certification role receipt is required")
         store = ArtifactStore(root)
         packet = cls._read_packet(store, receipt.role, receipt.input_packet_hash)
-        ticket06_packet = _is_ticket06_packet(receipt.role, packet)
+        packet_version = _post_ticket05_packet_version(receipt.role, packet)
         private = Path(root) / "private-boundary" / "certification-role-ingress" / receipt.role / receipt.ingress_hash
         try:
             raw = (private / "role-output.raw.json").read_bytes()
@@ -653,7 +682,7 @@ class CertificationRoleIngress:
         manifest_lineage = manifest.get("role_session_lineage") if isinstance(manifest, dict) else None
         manifest_profile = manifest.get("execution_profile") if isinstance(manifest, dict) else None
         legacy_isolated_manifest = (
-            not ticket06_packet
+            packet_version is None
             and manifest_profile is None
             and manifest_lineage in _ROLE_LINEAGE_ALLOWLISTS[receipt.role]
         )
@@ -661,7 +690,7 @@ class CertificationRoleIngress:
         configured_grant: Artifact | None = None
         if (
             effective_profile == "isolated_subagent"
-            and (ticket06_packet or manifest_lineage not in _ROLE_LINEAGE_ALLOWLISTS[receipt.role])
+            and (packet_version is not None or manifest_lineage not in _ROLE_LINEAGE_ALLOWLISTS[receipt.role])
             and isinstance(manifest, dict)
         ):
             configured_grant = cls.validate_isolated_lineage(
@@ -696,13 +725,16 @@ class CertificationRoleIngress:
             and manifest_lineage
             in _PROFILE_LINEAGE_ALLOWLISTS[cast(CertificationExecutionProfile, effective_profile)][receipt.role]
         )
-        if ticket06_packet:
+        if packet_version is not None:
+            expected_fixture_lineage = {
+                6: _TICKET06_FIXTURE_ROLE_LINEAGES[receipt.role],
+                7: _TICKET07_FIXTURE_ROLE_LINEAGES[receipt.role],
+            }[packet_version]
             static_lineage = (
-                effective_profile == "fixture_contract_simulator"
-                and manifest_lineage == _TICKET06_FIXTURE_ROLE_LINEAGES[receipt.role]
+                effective_profile == "fixture_contract_simulator" and manifest_lineage == expected_fixture_lineage
             )
             if manifest_lineage in _ROLE_LINEAGE_ALLOWLISTS[receipt.role]:
-                raise CertificationRoleOutputError("Ticket05 legacy isolated lineage cannot authorize Ticket06")
+                raise CertificationRoleOutputError("Ticket05 legacy isolated lineage cannot authorize a later ticket")
         if (
             not isinstance(manifest, dict)
             or effective_profile not in _PROFILE_LINEAGE_ALLOWLISTS
@@ -738,7 +770,7 @@ class CertificationRoleIngress:
         payload = packet.payload
         items_per_turn = (
             cast(int, payload.get("items_per_turn"))
-            if role in {"TeacherScorer", "StudentJudge"} and payload.get("items_per_turn") in {4, 8}
+            if role in {"TeacherScorer", "StudentJudge"} and payload.get("items_per_turn") in {4, 8, 16, 32}
             else 8
         )
         expected_output_schema = output_schema_contract(role, items_per_turn=items_per_turn)
@@ -872,7 +904,7 @@ class CertificationRoleIngress:
         if (
             not isinstance(turns, list)
             or type(items_per_turn) is not int
-            or items_per_turn not in {4, 8}
+            or items_per_turn not in ({4, 8} if role == "TeacherScorer" else {4, 8, 16, 32})
             or session.get("turn_count") != len(turns)
             or len(turns) != 32 // items_per_turn
             or any(
