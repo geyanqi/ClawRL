@@ -92,13 +92,16 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-10-cfs-readiness-reward-roundtrip",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "b658b67",
+      "push_state": "pushed"
     },
     "11": {
       "blocked_by": ["01"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-11-classic-reward-identity",
+      "commit": "4fba1a6",
+      "push_state": "pushed"
     },
     "12": {
       "blocked_by": ["11"],
