@@ -76,13 +76,16 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-08-total-calibrated-judge-bundle",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "cd243b9",
+      "push_state": "pushed"
     },
     "09": {
       "blocked_by": ["03"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-09-final-evaluation-protocol",
+      "commit": null,
+      "push_state": "pending"
     },
     "10": {
       "blocked_by": ["02"],
