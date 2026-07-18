@@ -195,6 +195,22 @@ class V1RewardManager:
             for ordinal, row in enumerate(classic.rows)
         )
 
+    @staticmethod
+    def authorize_expected_trajectory_set(root: str | Path, expected_set: Artifact) -> Artifact:
+        from clawrl.training.expected_trajectory_set import (
+            ExpectedTrajectorySetError,
+            ExpectedTrajectorySetWorkflow,
+        )
+
+        try:
+            return ExpectedTrajectorySetWorkflow.authorize_scoring(
+                root,
+                expected_set=expected_set,
+                transport="v1",
+            )
+        except ExpectedTrajectorySetError as error:
+            raise V1RewardIdentityError("v1 ExpectedTrajectorySet validation failed closed") from error
+
 
 class PersistentFixtureTransferQueue:
     """Stateful deterministic queue keyed only by persisted original ordinals."""
