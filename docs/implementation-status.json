@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["09", "10", "11", "21"],
+  "ready_frontier": ["13", "20"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -105,12 +105,15 @@
     },
     "12": {
       "blocked_by": ["11"],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-12-verl-v1-transfer-identity",
+      "commit": null,
+      "push_state": "pending"
     },
     "13": {
       "blocked_by": ["10", "11"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "14": {
@@ -145,7 +148,7 @@
     },
     "20": {
       "blocked_by": ["10"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "21": {
