@@ -84,13 +84,16 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-09-final-evaluation-protocol",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "4199af1",
+      "push_state": "pushed"
     },
     "10": {
       "blocked_by": ["02"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-10-cfs-readiness-reward-roundtrip",
+      "commit": null,
+      "push_state": "pending"
     },
     "11": {
       "blocked_by": ["01"],
