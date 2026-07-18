@@ -2,8 +2,10 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "13",
-  "ready_frontier": ["20"],
+  "active_ticket": null,
+  "ready_frontier": [
+    "20"
+  ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -24,7 +26,9 @@
       "push_state": "pushed"
     },
     "02": {
-      "blocked_by": ["01"],
+      "blocked_by": [
+        "01"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-02-typed-harness-action",
@@ -32,7 +36,9 @@
       "push_state": "pushed"
     },
     "03": {
-      "blocked_by": ["02"],
+      "blocked_by": [
+        "02"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-03-governed-100-trace-dataset",
@@ -40,7 +46,9 @@
       "push_state": "pushed"
     },
     "04": {
-      "blocked_by": ["03"],
+      "blocked_by": [
+        "03"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-04-one-trace-fit-sol-labels",
@@ -48,7 +56,9 @@
       "push_state": "pushed"
     },
     "05": {
-      "blocked_by": ["04"],
+      "blocked_by": [
+        "04"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-05-luna8-certification",
@@ -56,7 +66,9 @@
       "push_state": "pushed"
     },
     "06": {
-      "blocked_by": ["05"],
+      "blocked_by": [
+        "05"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-06-luna4-sol-fallback",
@@ -64,7 +76,9 @@
       "push_state": "pushed"
     },
     "07": {
-      "blocked_by": ["05"],
+      "blocked_by": [
+        "05"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-07-expand-luna-16-32",
@@ -72,7 +86,10 @@
       "push_state": "pushed"
     },
     "08": {
-      "blocked_by": ["06", "07"],
+      "blocked_by": [
+        "06",
+        "07"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-08-total-calibrated-judge-bundle",
@@ -80,7 +97,9 @@
       "push_state": "pushed"
     },
     "09": {
-      "blocked_by": ["03"],
+      "blocked_by": [
+        "03"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-09-final-evaluation-protocol",
@@ -88,7 +107,9 @@
       "push_state": "pushed"
     },
     "10": {
-      "blocked_by": ["02"],
+      "blocked_by": [
+        "02"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-10-cfs-readiness-reward-roundtrip",
@@ -96,7 +117,9 @@
       "push_state": "pushed"
     },
     "11": {
-      "blocked_by": ["01"],
+      "blocked_by": [
+        "01"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-11-classic-reward-identity",
@@ -104,7 +127,9 @@
       "push_state": "pushed"
     },
     "12": {
-      "blocked_by": ["11"],
+      "blocked_by": [
+        "11"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-12-verl-v1-transfer-identity",
@@ -112,50 +137,74 @@
       "push_state": "pushed"
     },
     "13": {
-      "blocked_by": ["10", "11"],
-      "implementation_state": "in_progress",
+      "blocked_by": [
+        "10",
+        "11"
+      ],
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-13-expected-trajectory-set",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "9ebb19f",
+      "push_state": "pushed"
     },
     "14": {
-      "blocked_by": ["06", "07", "10", "13"],
+      "blocked_by": [
+        "06",
+        "07",
+        "10",
+        "13"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "15": {
-      "blocked_by": ["14"],
+      "blocked_by": [
+        "14"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "16": {
-      "blocked_by": ["14"],
+      "blocked_by": [
+        "14"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "17": {
-      "blocked_by": ["12", "14"],
+      "blocked_by": [
+        "12",
+        "14"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "18": {
-      "blocked_by": ["16", "17"],
+      "blocked_by": [
+        "16",
+        "17"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "19": {
-      "blocked_by": ["18"],
+      "blocked_by": [
+        "18"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "20": {
-      "blocked_by": ["10"],
+      "blocked_by": [
+        "10"
+      ],
       "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "21": {
-      "blocked_by": ["02"],
+      "blocked_by": [
+        "02"
+      ],
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-21-clusteradapter-phase-readiness",
@@ -163,57 +212,85 @@
       "push_state": "pushed"
     },
     "22": {
-      "blocked_by": ["18", "21"],
+      "blocked_by": [
+        "18",
+        "21"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "23": {
-      "blocked_by": ["19", "22"],
+      "blocked_by": [
+        "19",
+        "22"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "24": {
-      "blocked_by": ["08", "09", "20", "23"],
+      "blocked_by": [
+        "08",
+        "09",
+        "20",
+        "23"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "25": {
-      "blocked_by": ["24"],
+      "blocked_by": [
+        "24"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "26": {
-      "blocked_by": ["25"],
+      "blocked_by": [
+        "25"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "27": {
-      "blocked_by": ["26"],
+      "blocked_by": [
+        "26"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "28": {
-      "blocked_by": ["27"],
+      "blocked_by": [
+        "27"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "29": {
-      "blocked_by": ["28"],
+      "blocked_by": [
+        "28"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "30": {
-      "blocked_by": ["29"],
+      "blocked_by": [
+        "29"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "31": {
-      "blocked_by": ["30"],
+      "blocked_by": [
+        "30"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     },
     "32": {
-      "blocked_by": ["15", "31"],
+      "blocked_by": [
+        "15",
+        "31"
+      ],
       "implementation_state": "blocked",
       "production_readiness": "blocked"
     }
