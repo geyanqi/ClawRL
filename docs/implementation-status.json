@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["05", "09", "10", "11", "21"],
+  "ready_frontier": ["06", "07", "09", "10", "11", "21"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -44,22 +44,25 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-04-one-trace-fit-sol-labels",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "c9c764c",
+      "push_state": "pushed"
     },
     "05": {
       "blocked_by": ["04"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-05-luna8-certification",
+      "commit": null,
+      "push_state": "pending"
     },
     "06": {
       "blocked_by": ["05"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "07": {
       "blocked_by": ["05"],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "08": {
