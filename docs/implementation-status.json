@@ -108,8 +108,8 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-12-verl-v1-transfer-identity",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "a1d5f46",
+      "push_state": "pushed"
     },
     "13": {
       "blocked_by": ["10", "11"],
