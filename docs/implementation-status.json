@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": null,
-  "ready_frontier": ["13", "20"],
+  "active_ticket": "13",
+  "ready_frontier": ["20"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -113,8 +113,11 @@
     },
     "13": {
       "blocked_by": ["10", "11"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "in_progress",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-13-expected-trajectory-set",
+      "commit": null,
+      "push_state": "pending"
     },
     "14": {
       "blocked_by": ["06", "07", "10", "13"],
