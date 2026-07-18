@@ -42,7 +42,7 @@ def contract_example_student_raw(packet: Artifact, *, calibration_fault: str | N
 
     if packet.payload.get("role") != "student_judge":
         raise ValueError("student fixture requires a StudentJudge packet")
-    if calibration_fault not in {None, "polarity_inversion"}:
+    if calibration_fault not in {None, "polarity_inversion", "variance_collapse"}:
         raise ValueError("student calibration fault is invalid")
     session = cast(dict[str, Any], packet.payload["scoring_session"])
     turns = cast(list[dict[str, Any]], session["turns"])
@@ -60,6 +60,16 @@ def contract_example_student_raw(packet: Artifact, *, calibration_fault: str | N
                     **dimensions,
                     "correctness": 100 - dimensions["correctness"],
                     "reasoning_quality": max(0, dimensions["reasoning_quality"] - 35),
+                }
+            elif calibration_fault == "variance_collapse":
+                # A deterministic boundary fault that preserves item-specific evidence
+                # while compressing an otherwise content-derived judgment near a constant.
+                center = 50 if relation == "correct" else 49
+                dimensions = {
+                    "correctness": center,
+                    "reasoning_quality": 50,
+                    "task_completion": 50,
+                    "tool_discipline": 50,
                 }
             labels.append(
                 {
