@@ -100,8 +100,8 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-11-classic-reward-identity",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "4fba1a6",
+      "push_state": "pushed"
     },
     "12": {
       "blocked_by": ["11"],
