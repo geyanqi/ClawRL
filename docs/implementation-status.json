@@ -153,8 +153,8 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-21-clusteradapter-phase-readiness",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "059d6bd",
+      "push_state": "pushed"
     },
     "22": {
       "blocked_by": ["18", "21"],
