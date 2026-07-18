@@ -3,7 +3,7 @@
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
-  "ready_frontier": ["08", "09", "10", "11", "21"],
+  "ready_frontier": ["09", "10", "11", "21"],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -68,13 +68,16 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-07-expand-luna-16-32",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "2a538e0",
+      "push_state": "pushed"
     },
     "08": {
       "blocked_by": ["06", "07"],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-08-total-calibrated-judge-bundle",
+      "commit": null,
+      "push_state": "pending"
     },
     "09": {
       "blocked_by": ["03"],
