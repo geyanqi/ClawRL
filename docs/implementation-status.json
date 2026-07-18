@@ -100,7 +100,7 @@
       "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-11-classic-reward-identity",
-      "commit": "4fba1a6",
+      "commit": "f62e1ce",
       "push_state": "pushed"
     },
     "12": {
@@ -150,8 +150,11 @@
     },
     "21": {
       "blocked_by": ["02"],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-21-clusteradapter-phase-readiness",
+      "commit": null,
+      "push_state": "pending"
     },
     "22": {
       "blocked_by": ["18", "21"],
