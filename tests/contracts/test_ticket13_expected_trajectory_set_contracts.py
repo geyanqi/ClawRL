@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from clawrl.artifacts import JsonValue
+from clawrl.artifacts import ArtifactStore, JsonValue
 from clawrl.training.classic_identity import ClassicSourceRow, ClassicTrajectoryRow
 from clawrl.training.expected_trajectory_set import (
     ExpectedTrajectorySetConfig,
@@ -90,6 +90,22 @@ def test_v1_reward_manager_invokes_the_shared_expected_set_validator(tmp_path: P
     incomplete = ExpectedTrajectorySetWorkflow.freeze(incomplete_root, config=config, sources=_sources())
     with pytest.raises(V1RewardIdentityError, match="failed closed"):
         V1RewardManager.authorize_expected_trajectory_set(incomplete_root, incomplete)
+
+
+def test_forged_empty_expected_set_fails_closed_before_authorization(tmp_path: Path) -> None:
+    config = ExpectedTrajectorySetConfig("expected-empty-forged-13", 15, rollout_count=2)
+    valid = ExpectedTrajectorySetWorkflow.freeze(tmp_path, config=config, sources=_sources())
+    forged = ArtifactStore(tmp_path).put(
+        "ExpectedTrajectorySet",
+        "1.0.0",
+        {
+            **valid.payload,
+            "expected_slot_count": 0,
+            "slots": [],
+        },
+    )
+    with pytest.raises(ExpectedTrajectorySetError, match="fields are invalid"):
+        ExpectedTrajectorySetWorkflow.authorize_scoring(tmp_path, expected_set=forged, transport="classic")
 
 
 @pytest.mark.parametrize("phase", ["TRAIN_35B", "TRAIN_122B"])

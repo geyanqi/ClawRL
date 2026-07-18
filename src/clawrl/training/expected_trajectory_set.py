@@ -376,6 +376,7 @@ class ExpectedTrajectorySetWorkflow:
             or set(artifact.payload) != expected_fields
             or artifact.payload.get("validator_id") != _VALIDATOR_ID
             or not isinstance(slots_value, list)
+            or not slots_value
         ):
             raise ExpectedTrajectorySetError("ExpectedTrajectorySet fields are invalid")
         run_id = _safe_id(artifact.payload.get("run_id"), "run_id")
