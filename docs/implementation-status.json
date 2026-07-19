@@ -4,7 +4,7 @@
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
   "ready_frontier": [
-    "20"
+    "14"
   ],
   "push_pending": [],
   "production_blockers": [
@@ -154,7 +154,7 @@
         "10",
         "13"
       ],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "15": {
@@ -198,8 +198,11 @@
       "blocked_by": [
         "10"
       ],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-20-fenced-budget-ledger",
+      "commit": "ce77e20",
+      "push_state": "pushed"
     },
     "21": {
       "blocked_by": [
