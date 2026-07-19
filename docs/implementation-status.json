@@ -4,7 +4,9 @@
   "integration_branch": "codex/overnight-production-shaped-dry-run",
   "active_ticket": null,
   "ready_frontier": [
-    "14"
+    "15",
+    "16",
+    "17"
   ],
   "push_pending": [],
   "production_blockers": [
@@ -154,14 +156,17 @@
         "10",
         "13"
       ],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-14-trace-128-router",
+      "commit": "b4fbb5a",
+      "push_state": "pushed"
     },
     "15": {
       "blocked_by": [
         "14"
       ],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "16": {
