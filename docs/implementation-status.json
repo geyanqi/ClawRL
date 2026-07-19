@@ -2,10 +2,8 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "16",
-  "ready_frontier": [
-    "17"
-  ],
+  "active_ticket": "17",
+  "ready_frontier": [],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -174,19 +172,22 @@
       "blocked_by": [
         "14"
       ],
-      "implementation_state": "in_progress",
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-16-classic-rewardloop-grouped-rewards",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "23f5014",
+      "push_state": "pushed"
     },
     "17": {
       "blocked_by": [
         "12",
         "14"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+      "implementation_state": "in_progress",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-17-verl-v1-grouped-reward",
+      "commit": null,
+      "push_state": "pending"
     },
     "18": {
       "blocked_by": [
