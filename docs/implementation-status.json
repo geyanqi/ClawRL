@@ -2,9 +2,8 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": null,
+  "active_ticket": "15",
   "ready_frontier": [
-    "15",
     "16",
     "17"
   ],
@@ -166,8 +165,11 @@
       "blocked_by": [
         "14"
       ],
-      "implementation_state": "ready",
-      "production_readiness": "blocked"
+      "implementation_state": "in_progress",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-15-judge-tool-grouped-route",
+      "commit": null,
+      "push_state": "pending"
     },
     "16": {
       "blocked_by": [
