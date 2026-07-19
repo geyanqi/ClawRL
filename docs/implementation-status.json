@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "17",
+  "active_ticket": "18",
   "ready_frontier": [],
   "push_pending": [],
   "production_blockers": [
@@ -183,19 +183,22 @@
         "12",
         "14"
       ],
-      "implementation_state": "in_progress",
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-17-verl-v1-grouped-reward",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "b5772a2",
+      "push_state": "pushed"
     },
     "18": {
       "blocked_by": [
         "16",
         "17"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+      "implementation_state": "in_progress",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-18-step-ready-recovery",
+      "commit": null,
+      "push_state": "pending"
     },
     "19": {
       "blocked_by": [
