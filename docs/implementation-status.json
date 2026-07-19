@@ -2,8 +2,12 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "14",
-  "ready_frontier": [],
+  "active_ticket": null,
+  "ready_frontier": [
+    "15",
+    "16",
+    "17"
+  ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -152,17 +156,17 @@
         "10",
         "13"
       ],
-      "implementation_state": "in_progress",
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-14-trace-128-router",
-      "commit": null,
-      "push_state": "pending"
+      "commit": "b4fbb5a",
+      "push_state": "pushed"
     },
     "15": {
       "blocked_by": [
         "14"
       ],
-      "implementation_state": "blocked",
+      "implementation_state": "ready",
       "production_readiness": "blocked"
     },
     "16": {
