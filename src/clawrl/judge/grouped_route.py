@@ -1,4 +1,4 @@
-"""Per-Trace ScoringSession routing and grouped trajectory scoring."""
+"""Compatibility exports for the Ticket 15 grouped Judge tool route."""
 
 from clawrl.router.grouped_route import (
     FixtureGroupedToolRouter,
@@ -10,8 +10,11 @@ from clawrl.router.grouped_route import (
     ToolSandboxLimits,
 )
 
+FixtureJudgeToolRoute = FixtureGroupedToolRouter
+
 __all__ = [
     "FixtureGroupedToolRouter",
+    "FixtureJudgeToolRoute",
     "FixtureHelperSandbox",
     "GroupedRouteConfig",
     "GroupedToolRouteError",

@@ -60,6 +60,18 @@ _LUNA4_WORKFLOW = {"Luna4CertificationWorkflow", "Luna4WorkflowSnapshot"}
 _FIT_MODELS = {"FixtureFitConfig", "GeneratorPlan", "InitialEvalRubric", "SolInferenceConfig"}
 _FIT_WORKFLOW = {"FitTrajectoryWorkflow", "FitWorkflowSnapshot"}
 
+# Ticket 15 is kept lazy like the other Judge seams so importing ``clawrl.judge``
+# never constructs a sandbox or reaches a filesystem boundary.
+_TOOL_ROUTE = {
+    "FixtureGroupedToolRouter",
+    "FixtureJudgeToolRoute",
+    "GroupedRouteConfig",
+    "GroupedToolRouteError",
+    "InjectedGroupedRouteCrash",
+    "ToolRequest",
+    "ToolSandboxLimits",
+}
+
 
 def __getattr__(name: str) -> Any:
     """Resolve public APIs lazily so boundary adapters can import model modules safely."""
@@ -88,4 +100,9 @@ def __getattr__(name: str) -> Any:
         from clawrl.judge import luna4_workflow
 
         return getattr(luna4_workflow, name)
+    if name in _TOOL_ROUTE:
+        from clawrl.router import grouped_route
+
+        alias = "FixtureGroupedToolRouter" if name == "FixtureJudgeToolRoute" else name
+        return getattr(grouped_route, alias)
     raise AttributeError(name)
