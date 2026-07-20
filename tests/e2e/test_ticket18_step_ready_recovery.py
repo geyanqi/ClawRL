@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -38,4 +39,4 @@ def test_late_result_is_quarantined_but_step_ready_is_unique(tmp_path: Path) -> 
         tmp_path, config=late, expected_set=expected, judge_packs=packs, experiment_spec=spec
     )
     assert snapshot.step_ready.payload["status"] == "step_ready"
-    assert len(snapshot.report.payload["fault_event_hashes"]) == 17
+    assert len(cast(list[str], snapshot.report.payload["fault_event_hashes"])) == 17
