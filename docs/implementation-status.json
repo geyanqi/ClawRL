@@ -2,8 +2,10 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "18",
-  "ready_frontier": [],
+    "active_ticket": "19",
+    "ready_frontier": [
+        "19"
+    ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -189,24 +191,27 @@
       "commit": "b5772a2",
       "push_state": "pushed"
     },
-    "18": {
-      "blocked_by": [
-        "16",
-        "17"
-      ],
-      "implementation_state": "in_progress",
-      "production_readiness": "blocked",
-      "branch": "codex/ticket-18-step-ready-recovery",
-      "commit": null,
-      "push_state": "pending"
-    },
-    "19": {
-      "blocked_by": [
-        "18"
-      ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
-    },
+        "18": {
+            "blocked_by": [
+                "16",
+                "17"
+            ],
+            "implementation_state": "complete",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-18-step-ready-recovery",
+            "commit": "8c3a1a2",
+            "push_state": "pushed"
+        },
+        "19": {
+            "blocked_by": [
+                "18"
+            ],
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-19-durable-step-applied",
+            "commit": null,
+            "push_state": "pending"
+        },
     "20": {
       "blocked_by": [
         "10"
