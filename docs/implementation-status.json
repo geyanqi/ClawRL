@@ -2,9 +2,9 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-    "active_ticket": "19",
+    "active_ticket": "22",
     "ready_frontier": [
-        "19"
+        "22"
     ],
   "push_pending": [],
   "production_blockers": [
@@ -206,11 +206,11 @@
             "blocked_by": [
                 "18"
             ],
-            "implementation_state": "in_progress",
+            "implementation_state": "complete",
             "production_readiness": "blocked",
             "branch": "codex/ticket-19-durable-step-applied",
-            "commit": null,
-            "push_state": "pending"
+            "commit": "69af9b2",
+            "push_state": "pushed"
         },
     "20": {
       "blocked_by": [
@@ -232,13 +232,16 @@
       "commit": "059d6bd",
       "push_state": "pushed"
     },
-    "22": {
+        "22": {
       "blocked_by": [
         "18",
         "21"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-22-hard-failure-stop",
+            "commit": null,
+            "push_state": "pending"
     },
     "23": {
       "blocked_by": [
