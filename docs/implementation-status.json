@@ -2,10 +2,10 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-    "active_ticket": "25",
-    "ready_frontier": [
-        "25"
-    ],
+  "active_ticket": "26",
+  "ready_frontier": [
+    "26"
+  ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -271,19 +271,22 @@
       "blocked_by": [
         "24"
       ],
-            "implementation_state": "in_progress",
+            "implementation_state": "complete",
             "production_readiness": "blocked",
             "branch": "codex/ticket-25-bounded-governor-iteration",
-            "commit": null,
-            "push_state": "pending"
-    },
-    "26": {
+            "commit": "5ce9ef0",
+            "push_state": "pushed"
+        },
+        "26": {
       "blocked_by": [
         "25"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
-    },
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked"
+            ,"branch": "codex/ticket-26-recertify-122b-bundle",
+            "commit": null,
+            "push_state": "pending"
+        },
     "27": {
       "blocked_by": [
         "26"
