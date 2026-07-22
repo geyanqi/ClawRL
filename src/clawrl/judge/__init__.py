@@ -20,6 +20,18 @@ if TYPE_CHECKING:
     from clawrl.judge.fit_workflow import FitTrajectoryWorkflow, FitWorkflowSnapshot
     from clawrl.judge.luna4_models import FixtureLuna4Config, ProductionLuna4Config
     from clawrl.judge.luna4_workflow import Luna4CertificationWorkflow, Luna4WorkflowSnapshot
+    from clawrl.judge.recertification_122b import (
+        Fixture122BConfig,
+        Fixture122BRecertificationConfig,
+        Fixture122BRecertificationSource,
+        InjectedRecertification122BCrash,
+        JudgeBundleRecertificationWorkflow,
+        Recertification122BConfig,
+        Recertification122BError,
+        Recertification122BSnapshot,
+        Recertification122BWorkflow,
+        TransferRecertificationWorkflow,
+    )
 
 __all__ = [
     "AlignmentPolicy",
@@ -42,6 +54,16 @@ __all__ = [
     "TraceJudgePrompt",
     "Luna4CertificationWorkflow",
     "Luna4WorkflowSnapshot",
+    "Fixture122BConfig",
+    "Fixture122BRecertificationConfig",
+    "Fixture122BRecertificationSource",
+    "InjectedRecertification122BCrash",
+    "JudgeBundleRecertificationWorkflow",
+    "Recertification122BConfig",
+    "Recertification122BError",
+    "Recertification122BSnapshot",
+    "Recertification122BWorkflow",
+    "TransferRecertificationWorkflow",
 ]
 
 _CERTIFICATION_MODELS = {
@@ -57,6 +79,18 @@ _CERTIFICATION_MODELS = {
 _CERTIFICATION_WORKFLOW = {"Luna8CertificationWorkflow", "Luna8WorkflowSnapshot"}
 _LUNA4_MODELS = {"FixtureLuna4Config", "ProductionLuna4Config"}
 _LUNA4_WORKFLOW = {"Luna4CertificationWorkflow", "Luna4WorkflowSnapshot"}
+_RECERTIFICATION_122B = {
+    "Fixture122BConfig",
+    "Fixture122BRecertificationConfig",
+    "Fixture122BRecertificationSource",
+    "InjectedRecertification122BCrash",
+    "JudgeBundleRecertificationWorkflow",
+    "Recertification122BConfig",
+    "Recertification122BError",
+    "Recertification122BSnapshot",
+    "Recertification122BWorkflow",
+    "TransferRecertificationWorkflow",
+}
 _FIT_MODELS = {"FixtureFitConfig", "GeneratorPlan", "InitialEvalRubric", "SolInferenceConfig"}
 _FIT_WORKFLOW = {"FitTrajectoryWorkflow", "FitWorkflowSnapshot"}
 
@@ -100,6 +134,10 @@ def __getattr__(name: str) -> Any:
         from clawrl.judge import luna4_workflow
 
         return getattr(luna4_workflow, name)
+    if name in _RECERTIFICATION_122B:
+        from clawrl.judge import recertification_122b
+
+        return getattr(recertification_122b, name)
     if name in _TOOL_ROUTE:
         from clawrl.router import grouped_route
 
