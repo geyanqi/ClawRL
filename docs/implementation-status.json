@@ -2,9 +2,9 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-    "active_ticket": "22",
+    "active_ticket": "23",
     "ready_frontier": [
-        "22"
+        "23"
     ],
   "push_pending": [],
   "production_blockers": [
@@ -237,19 +237,22 @@
         "18",
         "21"
       ],
-            "implementation_state": "in_progress",
+            "implementation_state": "complete",
             "production_readiness": "blocked",
             "branch": "codex/ticket-22-hard-failure-stop",
-            "commit": null,
-            "push_state": "pending"
-    },
-    "23": {
+            "commit": "ae32791",
+            "push_state": "pushed"
+        },
+        "23": {
       "blocked_by": [
         "19",
         "22"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-23-soft-two-phase-stop",
+            "commit": null,
+            "push_state": "pending"
     },
     "24": {
       "blocked_by": [
