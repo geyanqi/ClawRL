@@ -32,7 +32,7 @@ CLUSTER_OPERATIONS = (
 )
 _PHASES = {"TRAIN_35B", "TRAIN_122B"}
 _CLOSE_MODES = {"graceful_stop", "force_cancel"}
-_FAULT_DIRECTIVES = {None, "provider_error"}
+_FAULT_DIRECTIVES = {None, "provider_error", "emergency_stop"}
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$")
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 
@@ -390,11 +390,15 @@ class ClusterLifecycleWorkflow:
     def action_contracts(config: FixtureClusterLifecycleConfig, spec_hash: str) -> tuple[ClusterActionContract, ...]:
         if _HASH.fullmatch(spec_hash) is None:
             raise ClusterLifecycleError("ExperimentSpec hash is invalid")
-        plan = (
-            CLUSTER_OPERATIONS[:-1]
-            if config.close_mode == "graceful_stop"
-            else (*CLUSTER_OPERATIONS[:5], "force_cancel")
-        )
+        plan: tuple[str, ...]
+        if config.fault_directive == "emergency_stop":
+            plan = ("force_cancel",)
+        else:
+            plan = (
+                CLUSTER_OPERATIONS[:-1]
+                if config.close_mode == "graceful_stop"
+                else (*CLUSTER_OPERATIONS[:5], "force_cancel")
+            )
         return tuple(
             ClusterActionContract(
                 run_id=config.run_id,
@@ -478,6 +482,21 @@ class ClusterLifecycleWorkflow:
                 status="active",
             )
             _replace_ref(run_root / "state.ref", initial.content_hash)
+        if config.fault_directive == "emergency_stop":
+            provider = PersistentFixtureClusterLifecycle(root, store, config)
+            if not (provider.job_root / "state.ref").exists():
+                job = store.put(
+                    "FixtureClusterJob",
+                    "1.0.0",
+                    {
+                        "job_id": f"fixture-existing-job-{config.run_id}",
+                        "phase": config.phase,
+                        "run_id": config.run_id,
+                        "spec_hash": spec_hash,
+                        "status": "submitted",
+                    },
+                )
+                provider._publish_state(job, job.content_hash, "submitted")
         return cls._drive(root, config, spec_hash, input_artifact, crash_after_operation)
 
     @classmethod
@@ -860,14 +879,20 @@ class ClusterLifecycleWorkflow:
         record_status = record.payload["status"]
         if record_status in {"succeeded", "canceled"}:
             expected_closure = "graceful_stop" if record_status == "succeeded" else "force_cancel"
+            emergency_cancel = (
+                record_status == "canceled" and len(contracts) == 1 and contracts[0].operation == "force_cancel"
+            )
             if (
                 len(outcomes) != len(contracts)
                 or record.payload.get("closure_operation") != expected_closure
                 or record.payload.get("failed_operation") is not None
                 or record.payload.get("failure_evidence_hash") is not None
-                or any(
-                    record.payload.get(field) is None
-                    for field in ("provider_job_hash", "log_hash", "artifact_hash", "checkpoint_hash")
+                or (
+                    not emergency_cancel
+                    and any(
+                        record.payload.get(field) is None
+                        for field in ("provider_job_hash", "log_hash", "artifact_hash", "checkpoint_hash")
+                    )
                 )
             ):
                 raise ClusterLifecycleError("successful cluster RunRecord is incomplete")
