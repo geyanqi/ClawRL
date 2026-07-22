@@ -2,9 +2,9 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-    "active_ticket": "24",
+    "active_ticket": "25",
     "ready_frontier": [
-        "24"
+        "25"
     ],
   "push_pending": [],
   "production_blockers": [
@@ -261,18 +261,21 @@
         "20",
         "23"
       ],
-            "implementation_state": "in_progress",
+            "implementation_state": "complete",
             "production_readiness": "blocked",
             "branch": "codex/ticket-24-six-arm-35b-cohort",
-            "commit": null,
-            "push_state": "pending"
-    },
-    "25": {
+            "commit": "17084d9",
+            "push_state": "pushed"
+        },
+        "25": {
       "blocked_by": [
         "24"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-25-bounded-governor-iteration",
+            "commit": null,
+            "push_state": "pending"
     },
     "26": {
       "blocked_by": [
