@@ -17,6 +17,23 @@ from clawrl.training.hard_failure_stop import (
     StaleHardFailureController,
     classify_hard_failure,
 )
+from clawrl.training.soft_two_phase_stop import (
+    InjectedSoftStopControllerCrash,
+    MonitoringPolicy,
+    SoftFailureKind,
+    SoftStopConfig,
+    SoftStopController,
+    SoftStopError,
+    SoftStopKind,
+    SoftStopMonitor,
+    SoftStopObservation,
+    SoftStopWorkflow,
+    SoftTwoPhaseStopConfig,
+    SoftTwoPhaseStopObservation,
+    SoftTwoPhaseStopSnapshot,
+    SoftTwoPhaseStopWorkflow,
+    StaleSoftStopController,
+)
 
 __all__ = [
     "FailureKind",
@@ -34,4 +51,19 @@ __all__ = [
     "InjectedHardFailureControllerCrash",
     "StaleHardFailureController",
     "classify_hard_failure",
+    "InjectedSoftStopControllerCrash",
+    "MonitoringPolicy",
+    "SoftFailureKind",
+    "SoftStopConfig",
+    "SoftStopController",
+    "SoftStopError",
+    "SoftStopKind",
+    "SoftStopMonitor",
+    "SoftStopObservation",
+    "SoftStopWorkflow",
+    "SoftTwoPhaseStopConfig",
+    "SoftTwoPhaseStopObservation",
+    "SoftTwoPhaseStopSnapshot",
+    "SoftTwoPhaseStopWorkflow",
+    "StaleSoftStopController",
 ]

@@ -32,7 +32,16 @@ CLUSTER_OPERATIONS = (
 )
 _PHASES = {"TRAIN_35B", "TRAIN_122B"}
 _CLOSE_MODES = {"graceful_stop", "force_cancel"}
-_FAULT_DIRECTIVES = {None, "provider_error", "emergency_stop"}
+_FAULT_DIRECTIVES = {
+    None,
+    "provider_error",
+    "emergency_stop",
+    # Soft-stop fixtures deliberately retain the failed checkpoint outcome and
+    # continue to the final cancel.  This models a provider timeout/failure
+    # without losing the safety action or its durable evidence.
+    "soft_stop_checkpoint_timeout",
+    "soft_stop_checkpoint_failure",
+}
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$")
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 
@@ -183,13 +192,22 @@ class PersistentFixtureClusterLifecycle:
                     "sequence": contract.sequence,
                 },
             )
-            if self.config.fault_operation == contract.operation and self.config.fault_directive == "provider_error":
+            if self.config.fault_operation == contract.operation and self.config.fault_directive in {
+                "provider_error",
+                "soft_stop_checkpoint_timeout",
+                "soft_stop_checkpoint_failure",
+            }:
+                error_code = (
+                    f"FIXTURE_{contract.operation.upper()}_TIMEOUT"
+                    if self.config.fault_directive == "soft_stop_checkpoint_timeout"
+                    else f"FIXTURE_{contract.operation.upper()}_PROVIDER_ERROR"
+                )
                 outcome = self._outcome(
                     contract,
                     request,
                     status="failed",
                     result_hash=None,
-                    error_code=f"FIXTURE_{contract.operation.upper()}_PROVIDER_ERROR",
+                    error_code=error_code,
                 )
             else:
                 result = self._apply_success(contract, request)
@@ -627,31 +645,84 @@ class ClusterLifecycleWorkflow:
                     "status": "failed",
                 },
             )
-            record = cls._run_record(
-                store,
-                config,
-                spec_hash,
-                outcome_hashes,
-                status="failed",
-                closure_operation=None,
-                failed_operation=contract.operation,
-                failure_evidence_hash=evidence.content_hash,
+            # A soft-stop checkpoint failure is itself terminal for the
+            # checkpoint action, but not for the safety workflow: persist the
+            # failure evidence and continue to the configured cancel action.
+            soft_checkpoint_failure = (
+                config.fault_directive
+                in {
+                    "soft_stop_checkpoint_timeout",
+                    "soft_stop_checkpoint_failure",
+                }
+                and contract.operation == "checkpoint"
             )
-            terminal = cls._state_artifact(
+            if not soft_checkpoint_failure:
+                record = cls._run_record(
+                    store,
+                    config,
+                    spec_hash,
+                    outcome_hashes,
+                    status="failed",
+                    closure_operation=None,
+                    failed_operation=contract.operation,
+                    failure_evidence_hash=evidence.content_hash,
+                )
+                terminal = cls._state_artifact(
+                    store,
+                    run_id=config.run_id,
+                    input_hash=input_artifact.content_hash,
+                    spec_hash=spec_hash,
+                    next_index=next_index,
+                    outcome_hashes=outcome_hashes,
+                    recovery_hashes=recovery_hashes,
+                    run_record_hash=record.content_hash,
+                    status="terminal",
+                )
+                _replace_ref(run_root / "state.ref", terminal.content_hash)
+                return cls._snapshot(store, terminal)
+            advanced = cls._state_artifact(
                 store,
                 run_id=config.run_id,
                 input_hash=input_artifact.content_hash,
                 spec_hash=spec_hash,
-                next_index=next_index,
+                next_index=next_index + 1,
                 outcome_hashes=outcome_hashes,
                 recovery_hashes=recovery_hashes,
-                run_record_hash=record.content_hash,
-                status="terminal",
+                run_record_hash=None,
+                status="active",
             )
-            _replace_ref(run_root / "state.ref", terminal.content_hash)
-            return cls._snapshot(store, terminal)
+            _replace_ref(run_root / "state.ref", advanced.content_hash)
+            return None
         if next_index == len(contracts) - 1:
             record_status = "succeeded" if contract.operation == "graceful_stop" else "canceled"
+            failed_operation: str | None = None
+            failure_evidence_hash: str | None = None
+            if config.fault_directive in {"soft_stop_checkpoint_timeout", "soft_stop_checkpoint_failure"}:
+                failed = next(
+                    (
+                        store.read(item_hash, expected_schema_name="ClusterOperationOutcome")
+                        for item_hash in outcome_hashes
+                        if store.read(item_hash, expected_schema_name="ClusterOperationOutcome").payload.get("status")
+                        == "failed"
+                    ),
+                    None,
+                )
+                if failed is not None:
+                    failed_operation = cast(str, failed.payload.get("operation"))
+                    final_evidence = store.put(
+                        "ClusterProviderFailureEvidence",
+                        "1.0.0",
+                        {
+                            "action_proposal_hash": proposal.content_hash,
+                            "error_code": failed.payload.get("error_code"),
+                            "operation": failed_operation,
+                            "outcome_hash": failed.content_hash,
+                            "request_hash": failed.payload.get("request_hash"),
+                            "run_id": config.run_id,
+                            "status": "failed",
+                        },
+                    )
+                    failure_evidence_hash = final_evidence.content_hash
             record = cls._run_record(
                 store,
                 config,
@@ -659,8 +730,8 @@ class ClusterLifecycleWorkflow:
                 outcome_hashes,
                 status=record_status,
                 closure_operation=contract.operation,
-                failed_operation=None,
-                failure_evidence_hash=None,
+                failed_operation=failed_operation,
+                failure_evidence_hash=failure_evidence_hash,
             )
             terminal = cls._state_artifact(
                 store,
@@ -822,7 +893,12 @@ class ClusterLifecycleWorkflow:
             ClusterLifecycleWorkflow._validate_outcome(outcome, contract, request)
             ClusterLifecycleWorkflow._validate_provider_result(store, contract.operation, outcome, spec_hash)
             if outcome.payload["status"] == "failed" and index != len(outcomes) - 1:
-                raise ClusterLifecycleError("cluster workflow continued after a provider failure")
+                soft_checkpoint = (
+                    config.fault_directive in {"soft_stop_checkpoint_timeout", "soft_stop_checkpoint_failure"}
+                    and contract.operation == "checkpoint"
+                )
+                if not soft_checkpoint:
+                    raise ClusterLifecycleError("cluster workflow continued after a provider failure")
             previous_hash = outcome.content_hash
         outcomes_by_hash = {item.content_hash: item for item in outcomes}
         for evidence in recovery:
@@ -838,7 +914,7 @@ class ClusterLifecycleWorkflow:
                 or evidence.payload.get("request_hash") != matching_outcome.payload.get("request_hash")
             ):
                 raise ClusterLifecycleError("cluster recovery evidence is invalid")
-        ClusterLifecycleWorkflow._validate_run_record(store, record, outcomes, state, contracts)
+        ClusterLifecycleWorkflow._validate_run_record(store, record, outcomes, state, contracts, config)
         return ClusterLifecycleSnapshot(record, outcomes, recovery)
 
     @staticmethod
@@ -848,6 +924,7 @@ class ClusterLifecycleWorkflow:
         outcomes: tuple[Artifact, ...],
         state: Artifact,
         contracts: tuple[ClusterActionContract, ...],
+        config: FixtureClusterLifecycleConfig,
     ) -> None:
         expected = {
             "artifact_hash",
@@ -882,16 +959,30 @@ class ClusterLifecycleWorkflow:
             emergency_cancel = (
                 record_status == "canceled" and len(contracts) == 1 and contracts[0].operation == "force_cancel"
             )
+            soft_checkpoint_failure = (
+                record_status == "canceled"
+                and config.fault_directive
+                in {
+                    "soft_stop_checkpoint_timeout",
+                    "soft_stop_checkpoint_failure",
+                }
+                and record.payload.get("failed_operation") == "checkpoint"
+            )
             if (
                 len(outcomes) != len(contracts)
                 or record.payload.get("closure_operation") != expected_closure
-                or record.payload.get("failed_operation") is not None
-                or record.payload.get("failure_evidence_hash") is not None
+                or (not soft_checkpoint_failure and record.payload.get("failed_operation") is not None)
+                or (not soft_checkpoint_failure and record.payload.get("failure_evidence_hash") is not None)
                 or (
                     not emergency_cancel
                     and any(
                         record.payload.get(field) is None
-                        for field in ("provider_job_hash", "log_hash", "artifact_hash", "checkpoint_hash")
+                        for field in (
+                            "provider_job_hash",
+                            "log_hash",
+                            "artifact_hash",
+                            *(() if soft_checkpoint_failure else ("checkpoint_hash",)),
+                        )
                     )
                 )
             ):
