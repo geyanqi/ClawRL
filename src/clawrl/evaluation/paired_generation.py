@@ -28,6 +28,7 @@ from clawrl.artifacts import (
 )
 from clawrl.evaluation.future_dataset import load_evaluation_dataset
 from clawrl.evaluation.protocol_workflow import FinalEvaluationProtocolRegistry
+from clawrl.judge.fit_models import InitialEvalRubric
 from clawrl.training.run_journal import RunJournal, RunJournalError
 
 _HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -409,6 +410,31 @@ class PairedGenerationWorkflow:
             mapping = cls._seal_mapping(
                 root, store, config.campaign_id, assignment, config.controller_epoch, input_artifact.content_hash
             )
+            trajectories = {
+                (
+                    cast(str, artifact.payload["prompt_identity_hash"]),
+                    cast(str, artifact.payload["model_role"]),
+                ): artifact
+                for artifact in committed
+            }
+            scorer_payload_hashes: dict[str, str] = {}
+            for identity, label in assignment.items():
+                a_role, b_role = ("base", "trained") if label == "A" else ("trained", "base")
+
+                def visible(artifact: Artifact) -> dict[str, JsonValue]:
+                    return {
+                        "prompt": cast(str, artifact.payload["prompt"]),
+                        "response": cast(str, artifact.payload["response"]),
+                        "tool_transcript": cast(list[JsonValue], artifact.payload["tool_transcript"]),
+                    }
+
+                scorer_payload = {
+                    "rubric": InitialEvalRubric.fixture_default().artifact_payload(),
+                    "a_trajectory": visible(trajectories[(identity, a_role)]),
+                    "b_trajectory": visible(trajectories[(identity, b_role)]),
+                }
+                scorer_payload_artifact = store.put("SolScorerPayload", "1.0.0", scorer_payload)
+                scorer_payload_hashes[identity] = scorer_payload_artifact.content_hash
             manifest = store.put(
                 "PairedGenerationManifest",
                 "1.0.0",
@@ -420,6 +446,8 @@ class PairedGenerationWorkflow:
                     "evaluation_environment_hash": env_hash,
                     "generation_hashes": [a.content_hash for a in committed],
                     "sealed_mapping_commitment_hash": mapping.commitment.content_hash,
+                    "scorer_payload_hashes": scorer_payload_hashes,
+                    "scorer_payload_count": 100,
                     "generation_count": 200,
                     "schema_version": "paired-generation-manifest/1.0.0",
                     "status": "committed",

@@ -110,9 +110,23 @@ def test_async_group_barrier_worker_reorder_and_fresh_resume(tmp_path: Path) -> 
     assert {item["uid"] for item in extra} == {config.uid}
     assert [item["rollout_index"] for item in extra] == list(range(128))
     assert all(
-        {"dimensions", "confidence_basis_points", "failure_tags", "evidence", "turn_local_tie_groups",
-         "judge_pack_hash", "judge_pack_version", "scalarizer_hash", "scalarizer_version", "session_hash",
-         "thread_ref", "turn_ref", "trajectory_manifest_hash", "judge_result_hash", "trace_id"}
+        {
+            "dimensions",
+            "confidence_basis_points",
+            "failure_tags",
+            "evidence",
+            "turn_local_tie_groups",
+            "judge_pack_hash",
+            "judge_pack_version",
+            "scalarizer_hash",
+            "scalarizer_version",
+            "session_hash",
+            "thread_ref",
+            "turn_ref",
+            "trajectory_manifest_hash",
+            "judge_result_hash",
+            "trace_id",
+        }
         <= set(item)
         for item in extra
     )
