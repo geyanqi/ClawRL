@@ -2,10 +2,10 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "28",
-  "ready_frontier": [
-    "28"
-  ],
+    "active_ticket": "29",
+    "ready_frontier": [
+        "29"
+    ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -287,32 +287,35 @@
             "commit": "b9b204f",
             "push_state": "pushed"
         },
-    "27": {
+        "27": {
       "blocked_by": [
         "26"
       ],
-      "implementation_state": "in_progress",
+            "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-27-gated-122b-run",
       "commit": "78d1cfd",
-      "push_state": "pending"
+            "push_state": "pushed"
     },
-    "28": {
+        "28": {
       "blocked_by": [
         "27"
       ],
-      "implementation_state": "in_progress",
+            "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-28-candidate-freeze-t0",
-      "commit": null,
-      "push_state": "pending"
+            "commit": "43ec640",
+            "push_state": "pending"
     },
-    "29": {
+        "29": {
       "blocked_by": [
         "28"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+            "implementation_state": "in_progress",
+            "production_readiness": "blocked",
+            "branch": "codex/ticket-29-future-100-dataset",
+            "commit": null,
+            "push_state": "pending"
     },
     "30": {
       "blocked_by": [
