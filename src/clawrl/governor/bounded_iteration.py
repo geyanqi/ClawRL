@@ -215,6 +215,39 @@ class BoundedGovernorWorkflow:
         return cls._drive(root, config, None)
 
     @classmethod
+    def bind_run_record(cls, root: str | Path, governor_id: str, *, run_record_hash: str) -> Artifact:
+        """Publish a terminal candidate carrying the durable 122B run lineage.
+
+        The original Governor candidate remains the immutable recertification
+        input.  This derived candidate is a workflow-owned handoff record, so
+        callers never manufacture a TransferCandidate after the gated run.
+        """
+        if _HASH.fullmatch(run_record_hash) is None:
+            raise BoundedGovernorError("run_record_hash is invalid")
+        snapshot = cls.resume(root, governor_id)
+        candidate = snapshot.transfer_candidate
+        if candidate is None or not snapshot.terminal:
+            raise BoundedGovernorError("Governor candidate is not terminal")
+        store = ArtifactStore(root)
+        run = store.read(run_record_hash, expected_schema_name="RunRecord")
+        if run.payload.get("status") != "succeeded" or run.payload.get("phase") != "TRAIN_122B":
+            raise BoundedGovernorError("122B run is not a terminal transfer input")
+        existing = candidate.payload.get("run_record_hash")
+        if existing is not None and existing != run_record_hash:
+            raise BoundedGovernorError("TransferCandidate run lineage conflict")
+        if existing == run_record_hash:
+            return candidate
+        return store.put(
+            "TransferCandidate",
+            "1.0.0",
+            {
+                **candidate.payload,
+                "run_record_hash": run_record_hash,
+                "source_transfer_candidate_hash": candidate.content_hash,
+            },
+        )
+
+    @classmethod
     def _cohort(cls, root: str | Path, cohort_id: str) -> Artifact:
         store = ArtifactStore(root)
         try:

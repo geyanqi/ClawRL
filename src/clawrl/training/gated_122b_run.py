@@ -69,6 +69,11 @@ class Independent122BExperimentSpecConfig:
     approved_by: str = ""
     authoring_mode: str = "independent"
     model_size: str = "122B"
+    evaluation_environment_hash: str | None = None
+    semantic_decoding: dict[str, JsonValue] | None = None
+    tool_harness_policy: dict[str, JsonValue] | None = None
+    prompt_wrapper: dict[str, JsonValue] | None = None
+    evaluator_visible_trajectory_schema: dict[str, JsonValue] | None = None
 
     def __post_init__(self) -> None:
         if _ID.fullmatch(self.experiment_id) is None:
@@ -93,9 +98,11 @@ class Independent122BExperimentSpecConfig:
         ):
             if not isinstance(value, dict) or not value:
                 raise Gated122BReadinessError(f"122B ExperimentSpec {name} is missing")
+        if self.evaluation_environment_hash is not None and _HASH.fullmatch(self.evaluation_environment_hash) is None:
+            raise Gated122BReadinessError("122B evaluation environment hash is invalid")
 
     def payload(self) -> dict[str, JsonValue]:
-        return {
+        payload: dict[str, JsonValue] = {
             "approval_hash": self.approval_hash,
             "approved_by": self.approved_by,
             "authoring_mode": self.authoring_mode,
@@ -112,6 +119,18 @@ class Independent122BExperimentSpecConfig:
             "status": "approved",
             "schema_version": "independent-122b-experiment-spec/1.0.0",
         }
+        if self.evaluation_environment_hash is not None:
+            payload["evaluation_environment_hash"] = self.evaluation_environment_hash
+        for name in (
+            "semantic_decoding",
+            "tool_harness_policy",
+            "prompt_wrapper",
+            "evaluator_visible_trajectory_schema",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                payload[name] = value
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +142,7 @@ class Gated122BRunConfig:
     execution_profile: Literal["fixture", "production"] = "fixture"
     global_step: int = 0
     trainer_path: Literal["classic", "v1"] = "classic"
+    reward_manifest_hash: str | None = None
 
     def __post_init__(self) -> None:
         if _ID.fullmatch(self.run_id) is None:
@@ -132,6 +152,8 @@ class Gated122BRunConfig:
                 raise Gated122BRunError(f"{name} is invalid")
         if self.execution_profile not in {"fixture", "production"} or self.global_step != 0:
             raise Gated122BRunError("122B fixture short run is fixed to step zero")
+        if self.reward_manifest_hash is not None and _HASH.fullmatch(self.reward_manifest_hash) is None:
+            raise Gated122BRunError("reward_manifest_hash is invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,6 +248,16 @@ class Gated122BRunWorkflow:
         store = ArtifactStore(root_path)
         # No artifact is written before every immutable input is validated.
         dataset, bundle, spec = cls._validate_gate(store, config)
+        if config.reward_manifest_hash is not None:
+            manifest = store.read(config.reward_manifest_hash, expected_schema_name="RewardStepManifest")
+            if (
+                manifest.payload.get("run_id") != config.run_id
+                or manifest.payload.get("judge_bundle_hash") != config.judge_bundle_hash
+                or manifest.payload.get("slot_count") != 16 * 128
+                or manifest.payload.get("steps") != 16
+                or manifest.payload.get("rollouts_per_step") != 128
+            ):
+                raise Gated122BReadinessError("reward manifest lineage is invalid")
         readiness = store.put(
             "ReadinessReport",
             "1.0.0",
@@ -255,6 +287,7 @@ class Gated122BRunWorkflow:
                 "judge_bundle_hash": config.judge_bundle_hash,
                 "phase": "TRAIN_122B",
                 "run_id": config.run_id,
+                "reward_manifest_hash": config.reward_manifest_hash,
                 "schema_version": "gated-122b-run-input/1.0.0",
             },
         )
@@ -326,7 +359,7 @@ class Gated122BRunWorkflow:
                     "global_step": config.global_step,
                     "monitoring_policy": spec.payload["monitoring"],
                     "phase": "TRAIN_122B",
-                    "reward_hash": reward.content_hash,
+                    "reward_hash": config.reward_manifest_hash or reward.content_hash,
                     "run_id": config.run_id,
                     "status": "healthy",
                 },
@@ -343,7 +376,7 @@ class Gated122BRunWorkflow:
                     "monitor_observation_hash": monitor.content_hash,
                     "optimizer_update_count": 1,
                     "phase": "TRAIN_122B",
-                    "reward_hash": reward.content_hash,
+                    "reward_hash": config.reward_manifest_hash or reward.content_hash,
                     "reward_root_hash": cast(str, step_ready.payload["reward_root_hash"]),
                     "run_id": config.run_id,
                     "step_applied_hash": durable.step_applied.content_hash,
@@ -408,6 +441,7 @@ class Gated122BRunWorkflow:
             cast(str, inp.payload["dataset_version_hash"]),
             cast(str, inp.payload["judge_bundle_hash"]),
             cast(str, inp.payload["experiment_spec_hash"]),
+            reward_manifest_hash=cast(str | None, inp.payload.get("reward_manifest_hash")),
         )
         if events[-1].payload.get("event_type") != "RUN_CLOSED":
             return cls.run(root, config=config, epoch=epoch)

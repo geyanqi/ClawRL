@@ -305,7 +305,7 @@
       "production_readiness": "blocked",
       "branch": "codex/ticket-28-candidate-freeze-t0",
       "commit": "43ec640",
-      "push_state": "pending"
+      "push_state": "pushed"
     },
     "29": {
       "blocked_by": [
@@ -315,7 +315,7 @@
       "production_readiness": "blocked",
       "branch": "codex/ticket-29-future-100-dataset",
       "commit": "9fe9fdf",
-      "push_state": "pending"
+      "push_state": "pushed"
     },
         "30": {
       "blocked_by": [
@@ -342,11 +342,12 @@
         "15",
         "31"
       ],
-            "implementation_state": "in_progress",
+            "implementation_state": "complete",
             "production_readiness": "blocked",
             "branch": "codex/ticket-32-fixture-closed-loop",
-            "commit": null,
-            "push_state": "pending"
+            "commit": "c6abc94",
+            "push_state": "pushed",
+            "blockers": []
         }
   }
 }
