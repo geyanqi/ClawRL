@@ -2,10 +2,8 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-  "active_ticket": "32",
-  "ready_frontier": [
-    "32"
-  ],
+  "active_ticket": null,
+  "ready_frontier": [],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
