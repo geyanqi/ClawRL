@@ -345,8 +345,8 @@
             "implementation_state": "blocked",
             "production_readiness": "blocked",
             "branch": "codex/ticket-32-fixture-closed-loop",
-            "commit": null,
-            "push_state": "pending",
+            "commit": "b7a6dc4",
+            "push_state": "pushed",
             "blockers": [
                 "Independent review P1: complete fixture still needs Recertification122BWorkflow/Gated122BRunWorkflow composition and lower-workflow CandidateFreeze/EvaluationDataset inputs; direct synthetic RunRecord/TransferCandidate construction is not accepted."
             ]
