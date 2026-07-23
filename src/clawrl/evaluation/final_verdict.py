@@ -155,6 +155,7 @@ class FinalVerdictConfig:
     protocol_hash: str | None = None
     controller_epoch: int = 1
     execution_profile: Literal["fixture", "production"] = "fixture"
+    run_record_hash: str | None = None
     # Alias used by early Ticket30 integrations.
     paired_generation_hash: str | None = None
 
@@ -173,6 +174,8 @@ class FinalVerdictConfig:
         object.__setattr__(self, "paired_generation_manifest_hash", cast(str, generation))
         if self.protocol_hash is not None:
             _hash(self.protocol_hash, "protocol_hash")
+        if self.run_record_hash is not None:
+            _hash(self.run_record_hash, "run_record_hash")
         if type(self.controller_epoch) is not int or self.controller_epoch <= 0:
             raise FinalVerdictError("controller_epoch is invalid")
         if self.execution_profile not in {"fixture", "production"}:
@@ -723,6 +726,7 @@ class SolFinalVerdictWorkflow:
                 "campaign_id": config.campaign_id,
                 "protocol_hash": config.protocol_hash
                 or cast(str, protocol_hash_from_freeze(store, config.candidate_freeze_hash)),
+                "run_record_hash": config.run_record_hash,
                 "candidate_freeze_hash": config.candidate_freeze_hash,
                 "evaluation_dataset_hash": config.evaluation_dataset_hash,
                 "paired_generation_manifest_hash": manifest.content_hash,
@@ -992,6 +996,9 @@ class SolFinalVerdictWorkflow:
             or terminal.payload.get("candidate_freeze_hash") != config.candidate_freeze_hash
             or terminal.payload.get("evaluation_dataset_hash") != config.evaluation_dataset_hash
             or terminal.payload.get("paired_generation_manifest_hash") != config.paired_generation_manifest_hash
+            or (
+                config.run_record_hash is not None and terminal.payload.get("run_record_hash") != config.run_record_hash
+            )
             or terminal.payload.get("generation_count") != 200
             or terminal.payload.get("verdict_count") != 100
             or type(terminal.payload.get("protocol_hash")) is not str
