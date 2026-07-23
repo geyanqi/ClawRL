@@ -2,10 +2,10 @@
   "schema_version": "1.0.0",
   "source_revision": "6710a69",
   "integration_branch": "codex/overnight-production-shaped-dry-run",
-    "active_ticket": "29",
-    "ready_frontier": [
-        "29"
-    ],
+  "active_ticket": "30",
+  "ready_frontier": [
+    "30"
+  ],
   "push_pending": [],
   "production_blockers": [
     "No approved production DataSourceSkill schema, credentials, or governance inputs",
@@ -191,27 +191,27 @@
       "commit": "b5772a2",
       "push_state": "pushed"
     },
-        "18": {
-            "blocked_by": [
-                "16",
-                "17"
-            ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-18-step-ready-recovery",
-            "commit": "8c3a1a2",
-            "push_state": "pushed"
-        },
-        "19": {
-            "blocked_by": [
-                "18"
-            ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-19-durable-step-applied",
-            "commit": "69af9b2",
-            "push_state": "pushed"
-        },
+    "18": {
+      "blocked_by": [
+        "16",
+        "17"
+      ],
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-18-step-ready-recovery",
+      "commit": "8c3a1a2",
+      "push_state": "pushed"
+    },
+    "19": {
+      "blocked_by": [
+        "18"
+      ],
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-19-durable-step-applied",
+      "commit": "69af9b2",
+      "push_state": "pushed"
+    },
     "20": {
       "blocked_by": [
         "10"
@@ -232,97 +232,100 @@
       "commit": "059d6bd",
       "push_state": "pushed"
     },
-        "22": {
+    "22": {
       "blocked_by": [
         "18",
         "21"
       ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-22-hard-failure-stop",
-            "commit": "ae32791",
-            "push_state": "pushed"
-        },
-        "23": {
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-22-hard-failure-stop",
+      "commit": "ae32791",
+      "push_state": "pushed"
+    },
+    "23": {
       "blocked_by": [
         "19",
         "22"
       ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-23-soft-two-phase-stop",
-            "commit": "af391b3",
-            "push_state": "pushed"
-        },
-        "24": {
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-23-soft-two-phase-stop",
+      "commit": "af391b3",
+      "push_state": "pushed"
+    },
+    "24": {
       "blocked_by": [
         "08",
         "09",
         "20",
         "23"
       ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-24-six-arm-35b-cohort",
-            "commit": "17084d9",
-            "push_state": "pushed"
-        },
-        "25": {
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-24-six-arm-35b-cohort",
+      "commit": "17084d9",
+      "push_state": "pushed"
+    },
+    "25": {
       "blocked_by": [
         "24"
       ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-25-bounded-governor-iteration",
-            "commit": "5ce9ef0",
-            "push_state": "pushed"
-        },
-        "26": {
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-25-bounded-governor-iteration",
+      "commit": "5ce9ef0",
+      "push_state": "pushed"
+    },
+    "26": {
       "blocked_by": [
         "25"
       ],
-            "implementation_state": "complete",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-26-recertify-122b-bundle",
-            "commit": "b9b204f",
-            "push_state": "pushed"
-        },
-        "27": {
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-26-recertify-122b-bundle",
+      "commit": "b9b204f",
+      "push_state": "pushed"
+    },
+    "27": {
       "blocked_by": [
         "26"
       ],
-            "implementation_state": "complete",
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-27-gated-122b-run",
       "commit": "78d1cfd",
-            "push_state": "pushed"
+      "push_state": "pushed"
     },
-        "28": {
+    "28": {
       "blocked_by": [
         "27"
       ],
-            "implementation_state": "complete",
+      "implementation_state": "complete",
       "production_readiness": "blocked",
       "branch": "codex/ticket-28-candidate-freeze-t0",
-            "commit": "43ec640",
-            "push_state": "pending"
+      "commit": "43ec640",
+      "push_state": "pending"
     },
-        "29": {
+    "29": {
       "blocked_by": [
         "28"
       ],
-            "implementation_state": "in_progress",
-            "production_readiness": "blocked",
-            "branch": "codex/ticket-29-future-100-dataset",
-            "commit": null,
-            "push_state": "pending"
+      "implementation_state": "complete",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-29-future-100-dataset",
+      "commit": "9fe9fdf",
+      "push_state": "pending"
     },
     "30": {
       "blocked_by": [
         "29"
       ],
-      "implementation_state": "blocked",
-      "production_readiness": "blocked"
+      "implementation_state": "in_progress",
+      "production_readiness": "blocked",
+      "branch": "codex/ticket-30-paired-generation-blinding",
+      "commit": null,
+      "push_state": "pending"
     },
     "31": {
       "blocked_by": [
