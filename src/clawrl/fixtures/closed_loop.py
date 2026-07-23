@@ -16,6 +16,9 @@ from pathlib import Path
 from typing import Literal, cast
 
 from clawrl.artifacts import Artifact, ArtifactCorruption, ArtifactStore, JsonValue, canonical_json_bytes, sha256_hex
+from clawrl.data.models import FixtureDataIngestConfig, QueryWindow
+from clawrl.data.validation import load_training_dataset
+from clawrl.data.workflow import GovernedDataIngestWorkflow
 from clawrl.evaluation import (
     EvaluationEnvironment,
     FinalEvaluationProtocolConfig,
@@ -27,9 +30,23 @@ from clawrl.evaluation import (
     PairedGenerationWorkflow,
     SolFinalVerdictWorkflow,
 )
-from clawrl.evaluation.future_dataset import prompt_identity_hash
+from clawrl.evaluation.candidate_freeze import CandidateFreezeConfig, CandidateFreezeWorkflow, FixtureControllerClock
+from clawrl.evaluation.future_dataset import (
+    Future100DatasetConfig,
+    FutureEvaluationDatasetWorkflow,
+    prompt_identity_hash,
+)
+from clawrl.governor.bounded_iteration import BoundedGovernorConfig, BoundedGovernorWorkflow
 from clawrl.governor.six_arm_cohort import SixArmCohortConfig, SixArmCohortWorkflow
 from clawrl.judge.fit_models import InitialEvalRubric
+from clawrl.judge.recertification_122b import (
+    Fixture122BRecertificationConfig,
+    Fixture122BRecertificationSource,
+    Recertification122BWorkflow,
+)
+from clawrl.training.classic_identity import ClassicSourceRow
+from clawrl.training.expected_trajectory_set import ExpectedTrajectorySetConfig, ExpectedTrajectorySetWorkflow
+from clawrl.training.gated_122b_run import Gated122BRunConfig, Gated122BRunWorkflow, Independent122BExperimentSpecConfig
 from clawrl.training.reward_roundtrip import (
     FenceAuthority,
     FixtureCfsBackend,
@@ -156,7 +173,42 @@ def _artifact_hash(payload: object) -> str:
     return sha256_hex(canonical_json_bytes(payload))
 
 
-def _fixture_final_evaluation(root: Path, config: FixtureClosedLoopConfig, run_record: Artifact) -> Artifact:
+def _fixture_ingest_dataset(root: Path, campaign_id: str) -> Artifact:
+    """Run the existing governed fixture ingest instead of fabricating a DatasetVersion."""
+    try:
+        from tests.fixtures.ticket03_data import stage_data_provider
+    except ImportError as error:  # pragma: no cover - fixture package is part of this repository
+        raise ClosedLoopReadinessError("FIXTURE_DATA_PROVIDER_UNAVAILABLE") from error
+    ingest_config = FixtureDataIngestConfig(
+        run_id=f"{campaign_id}-ingest",
+        query_sql=(
+            "SELECT trace_pk, report_id, event_time_utc, ingestion_time_utc, purpose, prompt, response, "
+            "tool_name, model_id, private_sentinel FROM fixture.online_trace "
+            "WHERE event_time_utc >= :start_utc AND event_time_utc < :end_utc AND purpose = :purpose "
+            "ORDER BY trace_pk ASC, ingestion_time_utc ASC"
+        ),
+        window=QueryWindow("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"),
+    )
+    snapshot = GovernedDataIngestWorkflow.bootstrap(
+        root, ingest_config, role_ingress=stage_data_provider(root), epoch=1
+    )
+    while not snapshot.terminal:
+        snapshot = GovernedDataIngestWorkflow.resume(root, ingest_config.run_id, epoch=1)
+    if snapshot.dataset_version is None:
+        raise ClosedLoopReadinessError("DATASET_INGEST_NOT_PUBLISHED")
+    return snapshot.dataset_version
+
+
+def _fixture_final_evaluation(
+    root: Path,
+    config: FixtureClosedLoopConfig,
+    run_record: Artifact,
+    *,
+    dataset_hash: str,
+    judge_bundle_hash: str,
+    experiment_spec_hash: str,
+    trained_checkpoint_hash: str,
+) -> Artifact:
     """Drive Tickets 28-31 through their durable workflow seams."""
 
     store = ArtifactStore(root)
@@ -168,30 +220,47 @@ def _fixture_final_evaluation(root: Path, config: FixtureClosedLoopConfig, run_r
         ),
     )
     base_checkpoint = store.put(
-        "Checkpoint", "1.0.0", {"model_identity": "base-122B", "run_id": run_record.payload["run_id"]}
-    )
-    freeze = store.put(
-        "CandidateFreeze",
+        "Checkpoint",
         "1.0.0",
         {
-            "campaign_id": config.campaign_id,
-            "protocol_hash": protocol.protocol.content_hash,
             "evaluation_environment_hash": protocol.environment.content_hash,
-            "base_checkpoint_hash": base_checkpoint.content_hash,
-            "trained_checkpoint_hash": run_record.payload["checkpoint_hash"],
-            "trained_run_record_hash": run_record.content_hash,
-            "dataset_version_hash": config.dataset_version_hash,
-            "judge_bundle_hash": config.judge_bundle_hash,
-            "experiment_spec_hash": config.experiment_spec_hash,
-            "status": "immutable",
-            "t0_utc": "2026-02-01T00:00:00Z",
+            "model_identity": "base-122B",
+            "run_id": run_record.payload["run_id"],
+            **{
+                name: protocol.environment.payload[name]
+                for name in (
+                    "semantic_decoding",
+                    "tool_harness_policy",
+                    "prompt_wrapper",
+                    "evaluator_visible_trajectory_schema",
+                )
+            },
         },
     )
-    ArtifactStore._publish(
-        root / "candidate-freeze" / config.campaign_id / "active.ref", f"{freeze.content_hash}\n".encode("ascii")
+    freeze_result = CandidateFreezeWorkflow.run(
+        root,
+        config=CandidateFreezeConfig(
+            campaign_id=config.campaign_id,
+            protocol_hash=protocol.protocol.content_hash,
+            preregistration_receipt_hash=protocol.receipt.content_hash,
+            trained_run_record_hash=run_record.content_hash,
+            base_checkpoint_hash=base_checkpoint.content_hash,
+            dataset_version_hash=dataset_hash,
+            judge_bundle_hash=judge_bundle_hash,
+            experiment_spec_hash=experiment_spec_hash,
+            trained_checkpoint_hash=trained_checkpoint_hash,
+            controller_epoch=config.controller_epoch,
+            t0_utc="2026-02-01T00:00:00Z",
+        ),
+        clock=FixtureControllerClock("2026-02-01T00:00:00Z"),
     )
+    if freeze_result.freeze is None:
+        raise ClosedLoopReadinessError("CANDIDATE_FREEZE_NOT_COMMITTED")
+    freeze = freeze_result.freeze
     rows = [
         {
+            "difficulty": "hard",
+            "purpose": "eval_only",
             "prompt": f"future prompt {index}",
             "prompt_identity_hash": prompt_identity_hash(f"future prompt {index}"),
             "provider_row_id": f"row-{index}",
@@ -200,26 +269,19 @@ def _fixture_final_evaluation(root: Path, config: FixtureClosedLoopConfig, run_r
         }
         for index in range(100)
     ]
-    dataset = store.put(
-        "EvaluationDataset",
-        "1.0.0",
-        {
-            "campaign_id": config.campaign_id,
-            "candidate_freeze_hash": freeze.content_hash,
-            "protocol_hash": protocol.protocol.content_hash,
-            "identity_normalizer_hash": cast(dict[str, JsonValue], protocol.protocol.payload["identity_exclusion"])[
-                "normalizer_hash"
-            ],
-            "source_contract_hash": _artifact_hash({"campaign": config.campaign_id, "source": "fixture"}),
-            "governance_hash": _artifact_hash({"campaign": config.campaign_id, "governance": "fixture"}),
-            "window_hash": _artifact_hash({"campaign": config.campaign_id, "window": "future-100"}),
-            "t0_utc": "2026-02-01T00:00:00Z",
-            "window": {"initial_end_utc": "2026-02-02T00:00:00Z", "extension_used": False},
-            "prompt_rows": rows,
-            "purpose": "eval_only",
-            "status": "immutable",
-        },
+    dataset_result = FutureEvaluationDatasetWorkflow.run(
+        root,
+        config=Future100DatasetConfig(
+            campaign_id=config.campaign_id,
+            candidate_freeze_hash=freeze.content_hash,
+            protocol_hash=protocol.protocol.content_hash,
+            initial_rows=tuple(rows),
+        ),
+        initial_rows=rows,
     )
+    if dataset_result.dataset is None or dataset_result.status != "committed":
+        raise ClosedLoopReadinessError("EVALUATION_DATASET_NOT_COMMITTED")
+    dataset = dataset_result.dataset
     paired = PairedGenerationWorkflow.run(
         root,
         config=PairedGenerationConfig(config.campaign_id, freeze.content_hash, dataset.content_hash),
@@ -290,38 +352,87 @@ class FixtureClosedLoopWorkflow:
         for phase, (digest, schema) in refs.items():
             try:
                 artifact = store.read(digest, expected_schema_name=schema)
-                if phase == "JUDGE_CERTIFY" and artifact.payload.get("dataset_version_hash") not in {
-                    None,
-                    config.dataset_version_hash,
-                }:
+                if (
+                    phase == "JUDGE_CERTIFY"
+                    and artifact.payload.get("dataset_version_hash") != config.dataset_version_hash
+                ):
                     continue
-                if phase in {"TRAIN_35B", "TRAIN_122B", "FINAL_EVAL"} and artifact.payload.get(
-                    "dataset_version_hash"
-                ) not in {None, config.dataset_version_hash}:
+                if (
+                    phase in {"TRAIN_35B", "TRAIN_122B", "FINAL_EVAL"}
+                    and artifact.payload.get("dataset_version_hash") != config.dataset_version_hash
+                ):
                     continue
                 matrix[phase] = "green"
             except (ArtifactCorruption, KeyError, OSError, ValueError):
                 continue
         # Transfer and final evaluation have independent evidence.  A green
         # 35B spec therefore never implicitly releases either later phase.
-        transfer_seen = False
+        transfer_run_hashes: set[str] = set()
         final_seen = False
         try:
+            final_artifacts: list[Artifact] = []
             for path in (Path(root) / "artifacts").glob("*.json"):
                 try:
                     artifact = store.read(path.stem)
                 except Exception:
                     continue
-                if (
-                    artifact.schema_name == "TransferCandidate"
-                    and artifact.payload.get("campaign_id") == config.campaign_id
-                ):
-                    transfer_seen = True
-                if artifact.schema_name == "FinalEvalRun" and artifact.payload.get("campaign_id") == config.campaign_id:
-                    final_seen = True
+                if artifact.schema_name == "FinalEvalRun":
+                    final_artifacts.append(artifact)
+                    continue
+                if artifact.schema_name == "TransferCandidate":
+                    run_hash = artifact.payload.get("run_record_hash")
+                    if type(run_hash) is not str:
+                        continue
+                    try:
+                        run = store.read(run_hash, expected_schema_name="RunRecord")
+                    except Exception:
+                        continue
+                    if (
+                        run.payload.get("status") == "succeeded"
+                        and run.payload.get("phase") == "TRAIN_122B"
+                        and run.payload.get("dataset_version_hash") == config.dataset_version_hash
+                        and artifact.payload.get("status") == "immutable"
+                        and artifact.payload.get("terminal_action") == "stop_and_transfer"
+                        and artifact.payload.get("cohort_id") == f"{config.campaign_id}-35b"
+                    ):
+                        try:
+                            run_bundle = store.read(
+                                cast(str, run.payload["judge_bundle_hash"]), expected_schema_name="JudgeBundle"
+                            )
+                            run_spec = store.read(
+                                cast(str, run.payload["experiment_spec_hash"]), expected_schema_name="ExperimentSpec"
+                            )
+                        except Exception:
+                            continue
+                        if (
+                            run_bundle.payload.get("dataset_version_hash") == config.dataset_version_hash
+                            and run_bundle.payload.get("status") == "terminal"
+                            and run_bundle.payload.get("certification_phase") == "TRAIN_122B"
+                            and run_spec.payload.get("dataset_version_hash") == config.dataset_version_hash
+                            and run_spec.payload.get("model_size") == "122B"
+                            and run_spec.payload.get("status") in {"approved", "frozen"}
+                        ):
+                            transfer_run_hashes.add(run_hash)
+            for artifact in final_artifacts:
+                final_run_hash = artifact.payload.get("run_record_hash")
+                freeze_hash = artifact.payload.get("candidate_freeze_hash")
+                if type(final_run_hash) is not str or final_run_hash not in transfer_run_hashes:
+                    continue
+                try:
+                    freeze = store.read(cast(str, freeze_hash), expected_schema_name="CandidateFreeze")
+                except Exception:
+                    continue
+                final_seen = final_seen or (
+                    artifact.payload.get("campaign_id") == config.campaign_id
+                    and artifact.payload.get("status") == "terminal"
+                    and artifact.payload.get("verdict_count") == 100
+                    and freeze.payload.get("dataset_version_hash") == config.dataset_version_hash
+                    and freeze.payload.get("judge_bundle_hash") is not None
+                    and freeze.payload.get("experiment_spec_hash") is not None
+                )
         except OSError:
             pass
-        if not transfer_seen:
+        if not transfer_run_hashes:
             matrix["TRAIN_122B"] = "blocked"
             matrix["FINAL_EVAL"] = "blocked"
         elif not final_seen:
@@ -359,11 +470,17 @@ class FixtureClosedLoopWorkflow:
                         artifact.payload.get("trace_count") != 100
                         or not isinstance(refs, list)
                         or len(refs) != 100
-                        or len(set(refs)) != 100
-                        or any(type(item) is not str for item in refs)
+                        or len({item.get("trace_id") if isinstance(item, dict) else item for item in refs}) != 100
+                        or any(
+                            not isinstance(item, dict)
+                            or type(item.get("artifact_hash")) is not str
+                            or type(item.get("trace_id")) is not str
+                            for item in refs
+                        )
                     ):
                         raise ClosedLoopReadinessError("TRAINING_TRACE_COVERAGE_INVALID")
-                    for trace_hash in cast(list[str], refs):
+                    for trace_ref in refs:
+                        trace_hash = cast(str, cast(dict[str, object], trace_ref)["artifact_hash"])
                         trace = store.read(trace_hash, expected_schema_name="TrainingTrace")
                         if trace.payload.get("purpose") != "training_allowed" or not trace.payload.get("trace_id"):
                             raise ClosedLoopReadinessError("TRAINING_TRACE_LINEAGE_INVALID")
@@ -395,8 +512,14 @@ class FixtureClosedLoopWorkflow:
                         config.dataset_version_hash, expected_schema_name="DatasetVersion"
                     ).payload.get("trace_refs")
                     trace_ids = {
-                        cast(str, store.read(item, expected_schema_name="TrainingTrace").payload["trace_id"])
-                        for item in cast(list[str], trace_refs)
+                        cast(
+                            str,
+                            store.read(
+                                cast(str, cast(dict[str, object], item)["artifact_hash"]),
+                                expected_schema_name="TrainingTrace",
+                            ).payload["trace_id"],
+                        )
+                        for item in cast(list[dict[str, object]], trace_refs)
                     }
                     if counts != {trace_id: 32 for trace_id in trace_ids}:
                         raise ClosedLoopReadinessError("FIT_TRAJECTORY_PER_TRACE_COVERAGE_INVALID")
@@ -407,15 +530,12 @@ class FixtureClosedLoopWorkflow:
                         or artifact.payload.get("status") not in {"approved", "frozen"}
                     ):
                         raise ClosedLoopReadinessError("EXPERIMENT_SPEC_LINEAGE_INVALID")
-                if phase == "JUDGE_CERTIFY" and artifact.payload.get("dataset_version_hash") not in {
-                    None,
-                    config.dataset_version_hash,
-                }:
+                if (
+                    phase == "JUDGE_CERTIFY"
+                    and artifact.payload.get("dataset_version_hash") != config.dataset_version_hash
+                ):
                     raise ClosedLoopReadinessError("JUDGE_BUNDLE_DATASET_LINEAGE_CONFLICT")
-                if phase == "TRAIN_35B" and artifact.payload.get("dataset_version_hash") not in {
-                    None,
-                    config.dataset_version_hash,
-                }:
+                if phase == "TRAIN_35B" and artifact.payload.get("dataset_version_hash") != config.dataset_version_hash:
                     raise ClosedLoopReadinessError("EXPERIMENT_DATASET_LINEAGE_CONFLICT")
             except (ArtifactCorruption, ClosedLoopReadinessError, OSError, ValueError, KeyError) as error:
                 failed_phase, reason = phase, str(error) or f"{label.upper()}_MISSING"
@@ -497,8 +617,68 @@ class FixtureClosedLoopWorkflow:
         )
         if not cohort.terminal or cohort.promotion is None:
             raise ClosedLoopReadinessError("SIX_ARM_COHORT_NOT_TERMINAL")
-        cohort_promotion_hash = cohort.promotion.content_hash
-
+        evaluation_environment = store.put("EvaluationEnvironment", "1.0.0", EvaluationEnvironment().artifact_payload())
+        environment_payload = evaluation_environment.payload
+        # Establish fresh 122B recertification before producing reward slots;
+        # the reward manifest must bind the new JudgeBundle.
+        governor = BoundedGovernorWorkflow.run(
+            root_path,
+            config=BoundedGovernorConfig(
+                governor_id=f"{config.campaign_id}-governor",
+                cohort_id=f"{config.campaign_id}-35b",
+                branch="stop_and_transfer",
+                candidate_id=f"{config.campaign_id}-candidate",
+                controller_epoch=config.controller_epoch,
+            ),
+        )
+        transfer = governor.transfer_candidate
+        if transfer is None or not governor.terminal:
+            raise ClosedLoopReadinessError("GOVERNOR_TRANSFER_NOT_TERMINAL")
+        algorithm_hash = bundle.payload.get("algorithm_contract_hash")
+        if type(algorithm_hash) is not str:
+            algorithm = store.put(
+                "RLAlgorithmContract",
+                "1.0.0",
+                {
+                    "advantage_estimator": "grpo",
+                    "algorithm_id": f"{config.campaign_id}-grpo-v1",
+                    "reward_aggregation": "calibrated_scalar",
+                    "schema_version": "rl-algorithm-contract/1.0.0",
+                },
+            )
+            algorithm_hash = algorithm.content_hash
+        recert_config = Fixture122BRecertificationConfig(
+            run_id=f"{run_id}-recert",
+            transfer_candidate_hash=transfer.content_hash,
+            dataset_version_hash=config.dataset_version_hash,
+            reward_schema_hash=cast(str, reward_schema_hash),
+            scalarizer_hash=cast(str, scalarizer_hash),
+            algorithm_contract_hash=algorithm_hash,
+            old_judge_bundle_hash=config.judge_bundle_hash,
+        )
+        recert_source = Fixture122BRecertificationSource(
+            root_path,
+            dataset_version_hash=config.dataset_version_hash,
+            reward_schema_hash=cast(str, reward_schema_hash),
+            scalarizer_hash=cast(str, scalarizer_hash),
+            algorithm_contract_hash=algorithm_hash,
+        )
+        recert = Recertification122BWorkflow.run(
+            root_path, recert_config, source=recert_source, epoch=config.controller_epoch
+        )
+        if recert.judge_bundle is None or not recert.terminal:
+            raise ClosedLoopReadinessError("122B_RECERTIFICATION_NOT_TERMINAL")
+        reward_bundle_hash = recert.judge_bundle.content_hash
+        reward_pack_id = f"{config.campaign_id}-recertified-judge-pack"
+        report_hashes = recert.judge_bundle.payload.get("report_hashes")
+        if isinstance(report_hashes, list) and report_hashes:
+            first_report = store.read(cast(str, report_hashes[0]), expected_schema_name="CertificationReport")
+            pack_hash = first_report.payload.get("judge_pack_hash")
+            if type(pack_hash) is str:
+                pack = store.read(pack_hash, expected_schema_name="JudgePack")
+                if type(pack.payload.get("judge_pack_id")) is str:
+                    reward_pack_id = cast(str, pack.payload["judge_pack_id"])
+        judge_pack_id = reward_pack_id
         # Reward seam: drive the same stateful CFS/attempt/fencing workflow
         # used by production-shaped reward paths for all 16 x 128 slots.
         probe = FixtureCfsBackend(root_path, FixtureCfsConfig(f"{config.campaign_id}-cfs")).probe()
@@ -511,9 +691,26 @@ class FixtureClosedLoopWorkflow:
         if type(current_epoch) is not int or current_epoch != config.controller_epoch:
             raise ClosedLoopReadinessError("REWARD_FENCING_EPOCH_INVALID")
         rewards: list[Artifact] = []
+        first_trace = cast(
+            str,
+            load_training_dataset(store, config.dataset_version_hash).training_traces[0].payload["trace_id"],
+        )
         for step in range(16):
+            expected_source = ClassicSourceRow(
+                trace_id=first_trace,
+                uid=f"trace-{step:02d}",
+                judge_pack_id=judge_pack_id,
+                prompt=f"{config.campaign_id} expected trajectory source {step}",
+            )
+            ExpectedTrajectorySetWorkflow.run(
+                root_path,
+                config=ExpectedTrajectorySetConfig(run_id=f"{run_id}-expected", global_step=step, rollout_count=128),
+                sources=(expected_source,),
+                arrival_ordinals=tuple(range(128)),
+                transport="classic",
+            )
             for rollout in range(128):
-                uid = f"trace-{rollout % 100:03d}"
+                uid = f"trace-{step:02d}"
                 key = RewardSlotKey(run_id, step, uid, rollout, judge_pack_id)
                 reward_state = RewardRoundtripWorkflow.start(
                     root_path,
@@ -557,7 +754,7 @@ class FixtureClosedLoopWorkflow:
             {
                 "aggregation": "calibrated_scalar",
                 "dataset_version_hash": config.dataset_version_hash,
-                "judge_bundle_hash": config.judge_bundle_hash,
+                "judge_bundle_hash": reward_bundle_hash,
                 "reward_hashes": [item.content_hash for item in rewards],
                 "run_id": run_id,
                 "slot_count": len(rewards),
@@ -566,87 +763,57 @@ class FixtureClosedLoopWorkflow:
             },
         )
         effects.extend(("scorer", "optimizer"))
-        checkpoint = store.put(
-            "Checkpoint",
-            "1.0.0",
-            {
-                "evaluation_environment_hash": _artifact_hash(
-                    {"campaign_id": config.campaign_id, "phase": "FINAL_EVAL"}
+
+        independent_spec = Gated122BRunWorkflow.build_experiment_spec(
+            root_path,
+            Independent122BExperimentSpecConfig(
+                experiment_id=f"{config.campaign_id}-122b-spec",
+                dataset_version_hash=config.dataset_version_hash,
+                judge_bundle_hash=recert.judge_bundle.content_hash,
+                parallelism={"tensor": 8, "pipeline": 4},
+                resource={"gpu": "fixture-122b", "count": 8},
+                retry={"max_attempts": 2, "backoff_ticks": 1},
+                monitoring={"heartbeat_ticks": 4, "max_kl_millis": 250},
+                approval_hash=_artifact_hash({"campaign_id": config.campaign_id, "approver": "fixture"}),
+                approved_by="fixture-approver",
+                evaluation_environment_hash=evaluation_environment.content_hash,
+                semantic_decoding=cast(dict[str, JsonValue], environment_payload["semantic_decoding"]),
+                tool_harness_policy=cast(dict[str, JsonValue], environment_payload["tool_harness_policy"]),
+                prompt_wrapper=cast(dict[str, JsonValue], environment_payload["prompt_wrapper"]),
+                evaluator_visible_trajectory_schema=cast(
+                    dict[str, JsonValue], environment_payload["evaluator_visible_trajectory_schema"]
                 ),
-                "model_identity": "trained-122B",
-                "run_id": run_id,
-                "global_step": 16,
-            },
+            ),
         )
-        run_record = store.put(
-            "RunRecord",
-            "1.0.0",
-            {
-                "campaign_id": config.campaign_id,
-                "checkpoint_hash": checkpoint.content_hash,
-                "dataset_version_hash": config.dataset_version_hash,
-                "experiment_spec_hash": config.experiment_spec_hash,
-                "judge_bundle_hash": config.judge_bundle_hash,
-                "optimizer_update_count": 16,
-                "phase": "TRAIN_122B",
-                "reward_hash": reward_manifest.content_hash,
-                "run_id": run_id,
-                "status": "succeeded",
-                "negative_constraints": dict(NEGATIVE_CONSTRAINTS),
-            },
+        gated = Gated122BRunWorkflow.run(
+            root_path,
+            config=Gated122BRunConfig(
+                run_id=run_id,
+                dataset_version_hash=config.dataset_version_hash,
+                judge_bundle_hash=recert.judge_bundle.content_hash,
+                experiment_spec_hash=independent_spec.content_hash,
+                global_step=0,
+                reward_manifest_hash=reward_manifest.content_hash,
+            ),
+            epoch=config.controller_epoch,
         )
-        decision = store.put(
-            "DecisionRecord",
-            "1.0.0",
-            {
-                "action": "stop_and_transfer",
-                "campaign_id": config.campaign_id,
-                "experiment_spec_hash": config.experiment_spec_hash,
-                "run_record_hash": run_record.content_hash,
-                "status": "committed",
-                "negative_constraints": dict(NEGATIVE_CONSTRAINTS),
-            },
+        run_record = gated.run_record
+        gated_decision = gated.decision
+        checkpoint = gated.checkpoint
+        if run_record is None or gated_decision is None or checkpoint is None:
+            raise ClosedLoopReadinessError("122B_DURABLE_RUN_NOT_TERMINAL")
+        transfer = BoundedGovernorWorkflow.bind_run_record(
+            root_path, f"{config.campaign_id}-governor", run_record_hash=run_record.content_hash
         )
-        child = store.put(
-            "GovernorChild",
-            "1.0.0",
-            {
-                "branch": "stop_and_transfer",
-                "campaign_id": config.campaign_id,
-                "status": "completed",
-                "run_record_hash": run_record.content_hash,
-            },
+        final_eval = _fixture_final_evaluation(
+            root_path,
+            config,
+            run_record,
+            dataset_hash=config.dataset_version_hash,
+            judge_bundle_hash=recert.judge_bundle.content_hash,
+            experiment_spec_hash=independent_spec.content_hash,
+            trained_checkpoint_hash=cast(str, run_record.payload["checkpoint_hash"]),
         )
-        summary = store.put(
-            "ExperimentSummary",
-            "1.0.0",
-            {
-                "branch": "stop_and_transfer",
-                "causal_boundary": "controlled_comparison_only; black_box_descriptive_only",
-                "evidence_hashes": [child.content_hash],
-                "status": "terminal",
-            },
-        )
-        transfer = store.put(
-            "TransferCandidate",
-            "1.0.0",
-            {
-                "candidate_id": f"{config.campaign_id}-122b",
-                "campaign_id": config.campaign_id,
-                "dataset_version_hash": config.dataset_version_hash,
-                "decision_record_hash": decision.content_hash,
-                "experiment_spec_hash": config.experiment_spec_hash,
-                "judge_bundle_hash": config.judge_bundle_hash,
-                "cohort_promotion_hash": cohort_promotion_hash,
-                "cohort_id": f"{config.campaign_id}-35b",
-                "evidence_hashes": [child.content_hash],
-                "summary_hash": summary.content_hash,
-                "run_record_hash": run_record.content_hash,
-                "terminal_action": "stop_and_transfer",
-                "status": "immutable",
-            },
-        )
-        final_eval = _fixture_final_evaluation(root_path, config, run_record)
         effects.extend(("cluster", "final-eval"))
         matrix = {phase: "green" for phase in PHASES}
         return ClosedLoopSnapshot(
@@ -656,7 +823,7 @@ class FixtureClosedLoopWorkflow:
             readiness,
             tuple(events),
             run_record,
-            decision,
+            gated_decision,
             tuple(rewards),
             reward_manifest,
             transfer,
@@ -673,19 +840,9 @@ class FixtureClosedLoopWorkflow:
     def run_fixture(cls, root: str | Path, *, campaign_id: str = "fixture-closed-loop") -> ClosedLoopSnapshot:
         """Create exact-scale synthetic input artifacts and run the public seam."""
         store = ArtifactStore(root)
-        traces = [
-            store.put(
-                "TrainingTrace",
-                "1.0.0",
-                {
-                    "purpose": "training_allowed",
-                    "source_id": f"fixture-source-{index:03d}",
-                    "trace_id": f"trace-{index:03d}",
-                    "prompt": f"fixture prompt {index}",
-                    "response": f"fixture response {index}",
-                },
-            )
-            for index in range(100)
+        dataset = _fixture_ingest_dataset(Path(root), campaign_id)
+        trace_ids = [
+            item.payload["trace_id"] for item in load_training_dataset(store, dataset.content_hash).training_traces
         ]
         fit_trajectories = [
             store.put(
@@ -694,7 +851,7 @@ class FixtureClosedLoopWorkflow:
                 {
                     "fit_index": fit_index,
                     "status": "committed",
-                    "trace_id": f"trace-{fit_index % 100:03d}",
+                    "trace_id": trace_ids[fit_index % 100],
                     "trajectory_id": f"fit-{fit_index:04d}",
                 },
             )
@@ -725,21 +882,20 @@ class FixtureClosedLoopWorkflow:
                 "schema_version": "scalarizer/1.0.0",
             },
         )
+        algorithm = store.put(
+            "RLAlgorithmContract",
+            "1.0.0",
+            {
+                "advantage_estimator": "grpo",
+                "algorithm_id": f"{campaign_id}-grpo-v1",
+                "reward_aggregation": "calibrated_scalar",
+                "schema_version": "rl-algorithm-contract/1.0.0",
+            },
+        )
         judge_pack = store.put(
             "JudgePack",
             "1.0.0",
             {"judge_pack_id": f"{campaign_id}-judge-pack", "status": "committed", "version": "fixture-v1"},
-        )
-        dataset = store.put(
-            "DatasetVersion",
-            "1.0.0",
-            {
-                "dataset_version_id": f"{campaign_id}-dataset",
-                "purpose": "training_allowed",
-                "trace_count": 100,
-                "trace_refs": [trace.content_hash for trace in traces],
-                "trace_set_hash": sha256_hex(canonical_json_bytes([trace.content_hash for trace in traces])),
-            },
         )
         bundle = store.put(
             "JudgeBundle",
@@ -754,6 +910,7 @@ class FixtureClosedLoopWorkflow:
                 ],
                 "reward_schema_hash": reward_schema.content_hash,
                 "scalarizer_hash": scalarizer.content_hash,
+                "algorithm_contract_hash": algorithm.content_hash,
                 "status": "total",
                 "trace_count": 100,
             },

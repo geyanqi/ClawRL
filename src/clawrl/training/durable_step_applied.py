@@ -389,7 +389,19 @@ class DurableStepAppliedWorkflow:
             "run_id",
             "status",
         }
-        if set(p) != fields or p.get("status") != "committed" or p.get("durability") != "synchronous":
+        optional_environment_fields = {
+            "evaluation_environment_hash",
+            "semantic_decoding",
+            "tool_harness_policy",
+            "prompt_wrapper",
+            "evaluator_visible_trajectory_schema",
+        }
+        if (
+            not set(p).issubset(fields | optional_environment_fields)
+            or not fields.issubset(p)
+            or p.get("status") != "committed"
+            or p.get("durability") != "synchronous"
+        ):
             raise DurableStepAppliedError("checkpoint manifest is invalid")
         if (
             p.get("run_id") != config.run_id
@@ -702,6 +714,17 @@ class DurableStepAppliedWorkflow:
                     "reward_set_hash": reward_root,
                     "run_id": config.run_id,
                     "status": "committed",
+                    **{
+                        name: experiment_spec.payload[name]
+                        for name in (
+                            "evaluation_environment_hash",
+                            "semantic_decoding",
+                            "tool_harness_policy",
+                            "prompt_wrapper",
+                            "evaluator_visible_trajectory_schema",
+                        )
+                        if name in experiment_spec.payload
+                    },
                 },
             )
             cls._publish(checkpoint_ref, checkpoint)
