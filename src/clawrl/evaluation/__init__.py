@@ -1,5 +1,17 @@
 """Preregistered candidate freeze and sealed Future-100 pairwise evaluation."""
 
+from clawrl.evaluation.candidate_freeze import (
+    CandidateFreeze,
+    CandidateFreezeConfig,
+    CandidateFreezeError,
+    CandidateFreezeReadinessError,
+    CandidateFreezeSnapshot,
+    CandidateFreezeWorkflow,
+    FixtureCandidateFreezeConfig,
+    FixtureCandidateFreezeWorkflow,
+    FixtureControllerClock,
+    TrustedControllerClock,
+)
 from clawrl.evaluation.protocol_models import (
     EvaluationEnvironment,
     FinalEvaluationProtocolConfig,
@@ -22,4 +34,14 @@ __all__ = [
     "ProductionFinalEvaluationConfig",
     "ProtocolBindingConflictError",
     "ProtocolPreregistrationSnapshot",
+    "CandidateFreezeConfig",
+    "CandidateFreezeError",
+    "CandidateFreezeReadinessError",
+    "CandidateFreezeSnapshot",
+    "CandidateFreezeWorkflow",
+    "FixtureCandidateFreezeConfig",
+    "FixtureCandidateFreezeWorkflow",
+    "FixtureControllerClock",
+    "CandidateFreeze",
+    "TrustedControllerClock",
 ]
